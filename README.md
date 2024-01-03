@@ -1,7 +1,49 @@
 # glm-hmm
-Code to reproduce figures in ["Mice alternate between discrete strategies
- during perceptual decision-making"](https://www.biorxiv.org/content/10.1101/2020.10.19.346353v4.full.pdf) from Ashwood, Roy, Stone, IBL, Urai, Churchland, Pouget and Pillow (2020).  Note: while this code reproduces the figures/analyses for our paper, the easiest way to get started applying the GLM-HMM to your own data, is with [this notebook](https://github.com/zashwood/ssm/blob/master/notebooks/2b%20Input%20Driven%20Observations%20(GLM-HMM).ipynb). 
+Code to run GLM-HMM analysis on dmdm data using Zoe Ashwood's work and SWC's HPC. The code is heavily adapted from [Ashwood's repo](https://github.com/zashwood/glm-hmm). 
 
+Code is originally made to reproduce figures in ["Mice alternate between discrete strategies
+ during perceptual decision-making"](https://www.biorxiv.org/content/10.1101/2020.10.19.346353v4.full.pdf) from Ashwood, Roy, Stone, IBL, Urai, Churchland, Pouget and Pillow (2020).  Note: while this code reproduces the figures/analyses for their paper, the easiest way to get started applying the GLM-HMM to your own data, is with [this notebook](https://github.com/zashwood/ssm/blob/master/notebooks/2b%20Input%20Driven%20Observations%20(GLM-HMM).ipynb). 
+
+## Installation
+If you are new to SWC's HPC (like I was), [this page](https://howto.neuroinformatics.dev/programming/SSH-SWC-cluster.html) is very helpful.
+
+To retrieve the code by cloning the repository:
+```
+git clone https://github.com/sumiya-kuroda/glm-hmm.git
+```
+
+Create a conda environment from the environment yaml file by running 
+```
+conda env create -f environment.yml
+```
+Note: this may take a while as ibllib relies on OpenCV, and installing this can take a while.  
+
+We use version 0.0.1 of the Bayesian State Space Modeling framework from Scott Linderman's lab to perform GLM-HMM inference. Within the `glmhmm` environment, install the forked version of the `ssm` package available [here](https://github.com/zashwood/ssm). This is a lightly modified version of the master branch of the ssm package available at [https://github.com/lindermanlab/ssm](https://github.com/lindermanlab/ssm). It is modified so as to handle violation trials as described in Section 4 of Ashwood paper. In order to install this version of `ssm`, follow the instructions provided there, namely:     
+```
+cd ssm
+pip install numpy cython
+pip install -e .
+```
+
+## Getting started
+When you ssh to the HPC, you will first enter the login node. No computation-heavy analysis should be done on this node. Here, we use jupyter to make things easier, but you can play around with it. Here is what I do:
+```
+srun --job-name=jupyter -p gpu --gres=gpu:1 -n 4 --pty bash -l
+```
+
+Then, activate the conda environment by running 
+ ```
+ module load miniconda
+ conda activate glmhmm
+```
+
+Launch Jupyter and follow [this procedure](https://github.com/pierreglaser/jupyter-slurm-setup-instructions)
+```
+jupyter lab --port=2024
+```
+Now you should be able to connect to the Jupter notebook on HPC with [`http://127.0.0.1:2024/lab`](http://127.0.0.1:2024/lab) using your web browser. I personally use VSCode, so I will follow [this step](https://github.com/microsoft/vscode-jupyter/discussions/13145) instead.
+
+## Run GLM-HMM
 Code is ordered so that the IBL dataset discussed in the paper is
  preprocessed into the
  desired
@@ -32,30 +74,7 @@ Assuming that you have downloaded and preprocessed the datasets, and that you
       on these datasets before running the provided figure plotting code.
 
 
-Before beginning, create a conda environment from the environment yaml file by running 
-```
-conda env create -f environment.yml
-```
-Note: this may take a while as ibllib relies on OpenCV, and installing
- this can take a while.  Activate this
- environment by running 
- ```
- conda activate glmhmm
-```
-
-We use version 0.0.1 of the Bayesian State Space Modeling framework from
- Scott Linderman's lab to perform GLM-HMM inference.  Within the `glmhmm
- ` environment, install the forked version of the `ssm` package available 
-  [here](https://github.com/zashwood/ssm).  This is a lightly modified
-   version of
-   the
-  master branch of the ssm package available at [https://github.com
-  /lindermanlab/ssm](https://github.com/lindermanlab/ssm).  It is modified so as to handle violation trials as
-   described in Section 4 of our manuscript.  In order to install this
-    version of `ssm`, follow the instructions provided there, namely: 
-    
-```
-cd ssm
-pip install numpy cython
-pip install -e .
-```
+## Troubleshooting
+- To create symbolic link `ln -s ../ssm ssm`
+- Cannot find the kernel? See [here](https://www.mk-tech20.com/vscode-conda/)
+- You want to use dask? Check [this](https://github.com/pierreglaser/hpc-tutorial/tree/main) and [this](https://github.com/dask/dask-labextension).

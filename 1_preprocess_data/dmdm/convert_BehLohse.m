@@ -21,7 +21,7 @@ function convert_BehLohse(matfile)
 
     % Create directory for saving converted data:
     [~,fname] = fileparts(matfile);
-    saving_location = dmdm_data_path + fname + "/converted_to_npy/";
+    saving_location = dmdm_data_path + fname + "/Subjects/";
     if ~exist(saving_location, 'dir')
         mkdir(saving_location)
     end

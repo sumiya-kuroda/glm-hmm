@@ -13,12 +13,13 @@ import defopt
 
 npr.seed(65)
 
-def main(dname, *, req_num_sessions = 30):
+def main(dname, *, req_num_sessions = 30, num_fold=5):
     """
     Continue preprocessing of dmdm dataset and create design matrix for GLM-HMM
     
     :param str dname: name of dataset needs to be preprocessed
     :param int req_num_sessions: Required number of sessions for each animal
+    :param int num_fold: Number of folds for cross-validation
     """
     dirname = Path(os.path.dirname(os.path.abspath(__file__)))
     dmdm_data_path =  dirname.parents[1] / "data" / "dmdm" / dname
@@ -88,7 +89,7 @@ def main(dname, *, req_num_sessions = 30):
             animal_rt, animal_stimT)
         assert animal_outcome.shape[0] == animal_y.shape[0]
         animal_session_fold_lookup = create_train_test_sessions(animal_session,
-                                                                5)
+                                                                num_fold)
         np.savez(
             processed_dmdm_data_path / 'data_by_animal' / (animal + "_session_fold_lookup.npz"),
             animal_session_fold_lookup)

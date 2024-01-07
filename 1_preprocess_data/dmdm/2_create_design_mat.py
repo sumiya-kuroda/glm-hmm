@@ -1,0 +1,167 @@
+#!/usr/bin/env python
+
+import numpy as np
+from sklearn import preprocessing
+import numpy.random as npr
+import os
+import json
+from collections import defaultdict
+from preprocessing_utils import load_animal_list, load_animal_eid_dict, \
+    get_all_unnormalized_data_this_session, create_train_test_sessions
+from pathlib import Path
+import defopt
+
+npr.seed(65)
+
+def main(dname, *, req_num_sessions = 30):
+    """
+    Continue preprocessing of dmdm dataset and create design matrix for GLM-HMM
+    
+    :param str dname: name of dataset needs to be preprocessed
+    :param int req_num_sessions: Required number of sessions for each animal
+    """
+    dirname = Path(os.path.dirname(os.path.abspath(__file__)))
+    dmdm_data_path =  dirname.parents[1] / "data" / "dmdm" / dname
+    processed_dmdm_data_path =  dmdm_data_path / "data_for_cluster"
+
+    # Create directories for saving data:
+    Path(processed_dmdm_data_path).mkdir(parents=True, exist_ok=True)
+    # Also create a subdirectory for storing each individual animal's data:
+    Path(processed_dmdm_data_path / "data_by_animal").mkdir(parents=True, exist_ok=True)
+
+    # Load animal list/results of partial processing:
+    animal_list = load_animal_list(
+        dmdm_data_path / 'partially_processed' / 'animal_list.npz')
+    animal_eid_dict = load_animal_eid_dict(
+        dmdm_data_path / 'partially_processed' / 'animal_eid_dict.json')
+
+
+    # Remove animals with few sessions
+    for animal in animal_list:
+        num_sessions = len(animal_eid_dict[animal])
+        if num_sessions < req_num_sessions:
+            animal_list = np.delete(animal_list, np.where(animal_list == animal))
+            
+    # Identify idx in master array where each animal's data starts and ends:
+    animal_start_idx = {}
+    animal_end_idx = {}
+    final_animal_eid_dict = defaultdict(list)
+    # WORKHORSE: iterate through each animal and each animal's set of eids;
+    # obtain unnormalized data. Write out each animal's data and then also
+    # write to master array
+    for z, animal in enumerate(animal_list):
+        sess_counter = 0
+        for eid in animal_eid_dict[animal]:
+
+            animal, unnormalized_inpt, changesize, session, outcome, reactiontimes, stimT = \
+                get_all_unnormalized_data_this_session(
+                    eid, dmdm_data_path)
+            
+            if sess_counter == 0:
+                animal_unnormalized_inpt = np.copy(unnormalized_inpt)
+                animal_y = np.copy(changesize)
+                animal_session = session
+                animal_outcome = np.copy(outcome)
+                animal_rt = np.copy(reactiontimes)
+                animal_stimT = np.copy(stimT)
+            else:
+                animal_unnormalized_inpt = np.vstack(
+                    (animal_unnormalized_inpt, unnormalized_inpt))
+                animal_y = np.concatenate((animal_y, changesize))
+                animal_session = np.concatenate((animal_session, session))
+                animal_outcome = np.concatenate((animal_outcome, outcome))
+                animal_rt = np.concatenate((animal_rt, reactiontimes))
+                animal_stimT = np.concatenate((animal_stimT, stimT))
+            sess_counter += 1
+            final_animal_eid_dict[animal].append(eid)
+
+        # Write out animal's unnormalized data matrix:
+        np.savez(
+            processed_dmdm_data_path / 'data_by_animal' / (animal + '_unnormalized.npz'),
+            animal_unnormalized_inpt, animal_y,
+            animal_session)
+        np.savez(
+            processed_dmdm_data_path / 'data_by_animal' / (animal + '_outcome.npz'),
+            animal_outcome)
+        np.savez(
+            processed_dmdm_data_path / 'data_by_animal' / (animal + '_rt.npz'),
+            animal_rt, animal_stimT)
+        assert animal_outcome.shape[0] == animal_y.shape[0]
+        animal_session_fold_lookup = create_train_test_sessions(animal_session,
+                                                                5)
+        np.savez(
+            processed_dmdm_data_path / 'data_by_animal' / (animal + "_session_fold_lookup.npz"),
+            animal_session_fold_lookup)
+        
+        # Now create or append data to master array across all animals:
+        if z == 0:
+            master_inpt = np.copy(animal_unnormalized_inpt)
+            animal_start_idx[animal] = 0
+            animal_end_idx[animal] = master_inpt.shape[0] - 1
+            master_y = np.copy(animal_y)
+            master_session = animal_session
+            master_session_fold_lookup_table = animal_session_fold_lookup
+            master_outcome = np.copy(animal_outcome)
+            master_rt = np.copy(animal_rt)
+            master_stimT = np.copy(animal_stimT)
+        else:
+            animal_start_idx[animal] = master_inpt.shape[0]
+            master_inpt = np.concatenate((master_inpt, animal_unnormalized_inpt))
+            animal_end_idx[animal] = master_inpt.shape[0] - 1
+            master_y = np.concatenate((master_y, animal_y))
+            master_session = np.concatenate((master_session, animal_session))
+            master_session_fold_lookup_table = np.concatenate(
+                (master_session_fold_lookup_table, animal_session_fold_lookup))
+            master_outcome = np.concatenate((master_outcome, animal_outcome))
+            master_rt = np.concatenate((master_rt, animal_rt))
+            master_stimT = np.concatenate((master_stimT, animal_stimT))
+
+    # Write out master data across animals
+    assert np.shape(master_inpt)[0] == np.shape(master_y)[
+        0], "inpt and y not same length"
+    assert np.shape(master_outcome)[0] == np.shape(master_y)[
+        0], "outcome and y not same length"
+    assert len(np.unique(master_session)) == \
+           np.shape(master_session_fold_lookup_table)[
+               0], "number of unique sessions and session fold lookup don't " \
+                   "match"
+    normalized_inpt = np.copy(master_inpt)
+    normalized_inpt[:, 0] = preprocessing.scale(normalized_inpt[:, 0]) # ???
+    np.savez(processed_dmdm_data_path / 'all_animals_concat.npz',
+             normalized_inpt,
+             master_y, master_session)
+    np.savez(
+        processed_dmdm_data_path / 'all_animals_concat_unnormalized.npz',
+        master_inpt, master_y, master_session)
+    np.savez(
+        processed_dmdm_data_path / 'all_animals_concat_session_fold_lookup.npz',
+        master_session_fold_lookup_table)
+    np.savez(processed_dmdm_data_path / 'all_animals_concat_outcome.npz',
+             master_outcome)
+    np.savez(processed_dmdm_data_path / 'all_animals_concat_rt.npz',
+             master_rt, master_stimT)
+    np.savez(processed_dmdm_data_path / 'data_by_animal/' / 'animal_list.npz',
+             animal_list)
+
+    out_json = json.dumps(final_animal_eid_dict)
+    f = open(str(processed_dmdm_data_path) + "final_animal_eid_dict.json", "w")
+    f.write(out_json)
+    f.close()
+
+    # Now write out normalized data (when normalized across all animals) for
+    # each animal:
+    counter = 0
+    for animal in animal_start_idx.keys():
+        start_idx = animal_start_idx[animal]
+        end_idx = animal_end_idx[animal]
+        inpt = normalized_inpt[range(start_idx, end_idx + 1)]
+        y = master_y[range(start_idx, end_idx + 1)]
+        session = master_session[range(start_idx, end_idx + 1)]
+        counter += inpt.shape[0]
+        np.savez(processed_dmdm_data_path / 'data_by_animal' / (animal + '_processed.npz'),
+                 inpt, y,
+                 session)
+    assert counter == master_inpt.shape[0]
+
+if __name__ == "__main__":
+    defopt.run(main)

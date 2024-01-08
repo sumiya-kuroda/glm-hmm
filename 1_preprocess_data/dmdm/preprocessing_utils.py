@@ -48,7 +48,7 @@ def get_all_unnormalized_data_this_session(eid, path_to_dataset):
     # You can add some criteria here and change codes to 
     # something like changesize[trials_to_study]
 
-    return animal, unnormalized_inpt, changesize, session, outcome, reactiontimes, stimT
+    return animal, unnormalized_inpt, outcome, session, reactiontimes, stimT
 
 def get_raw_data(eid, path_to_dataset):
     print(eid)

@@ -13,13 +13,13 @@ import defopt
 
 npr.seed(65)
 
-def main(dname, *, req_num_sessions = 30, num_fold=5):
+def main(dname, *, req_num_sessions = 30, num_folds=5):
     """
     Continue preprocessing of dmdm dataset and create design matrix for GLM-HMM
     
     :param str dname: name of dataset needs to be preprocessed
     :param int req_num_sessions: Required number of sessions for each animal
-    :param int num_fold: Number of folds for cross-validation
+    :param int num_folds: Number of folds for cross-validation
     """
     dirname = Path(os.path.dirname(os.path.abspath(__file__)))
     dmdm_data_path =  dirname.parents[1] / "data" / "dmdm" / dname
@@ -54,23 +54,21 @@ def main(dname, *, req_num_sessions = 30, num_fold=5):
         sess_counter = 0
         for eid in animal_eid_dict[animal]:
 
-            animal, unnormalized_inpt, changesize, session, outcome, reactiontimes, stimT = \
+            animal, unnormalized_inpt, outcome, session, reactiontimes, stimT = \
                 get_all_unnormalized_data_this_session(
                     eid, dmdm_data_path)
             
             if sess_counter == 0:
                 animal_unnormalized_inpt = np.copy(unnormalized_inpt)
-                animal_y = np.copy(changesize)
+                animal_y = np.copy(outcome)
                 animal_session = session
-                animal_outcome = np.copy(outcome)
                 animal_rt = np.copy(reactiontimes)
                 animal_stimT = np.copy(stimT)
             else:
                 animal_unnormalized_inpt = np.vstack(
                     (animal_unnormalized_inpt, unnormalized_inpt))
-                animal_y = np.concatenate((animal_y, changesize))
+                animal_y = np.concatenate((animal_y, outcome))
                 animal_session = np.concatenate((animal_session, session))
-                animal_outcome = np.concatenate((animal_outcome, outcome))
                 animal_rt = np.concatenate((animal_rt, reactiontimes))
                 animal_stimT = np.concatenate((animal_stimT, stimT))
             sess_counter += 1
@@ -79,17 +77,9 @@ def main(dname, *, req_num_sessions = 30, num_fold=5):
         # Write out animal's unnormalized data matrix:
         np.savez(
             processed_dmdm_data_path / 'data_by_animal' / (animal + '_unnormalized.npz'),
-            animal_unnormalized_inpt, animal_y,
-            animal_session)
-        np.savez(
-            processed_dmdm_data_path / 'data_by_animal' / (animal + '_outcome.npz'),
-            animal_outcome)
-        np.savez(
-            processed_dmdm_data_path / 'data_by_animal' / (animal + '_rt.npz'),
-            animal_rt, animal_stimT)
-        assert animal_outcome.shape[0] == animal_y.shape[0]
+            animal_unnormalized_inpt, animal_y, animal_session, animal_rt, animal_stimT)
         animal_session_fold_lookup = create_train_test_sessions(animal_session,
-                                                                num_fold)
+                                                                num_folds)
         np.savez(
             processed_dmdm_data_path / 'data_by_animal' / (animal + "_session_fold_lookup.npz"),
             animal_session_fold_lookup)
@@ -102,7 +92,6 @@ def main(dname, *, req_num_sessions = 30, num_fold=5):
             master_y = np.copy(animal_y)
             master_session = animal_session
             master_session_fold_lookup_table = animal_session_fold_lookup
-            master_outcome = np.copy(animal_outcome)
             master_rt = np.copy(animal_rt)
             master_stimT = np.copy(animal_stimT)
         else:
@@ -113,36 +102,30 @@ def main(dname, *, req_num_sessions = 30, num_fold=5):
             master_session = np.concatenate((master_session, animal_session))
             master_session_fold_lookup_table = np.concatenate(
                 (master_session_fold_lookup_table, animal_session_fold_lookup))
-            master_outcome = np.concatenate((master_outcome, animal_outcome))
             master_rt = np.concatenate((master_rt, animal_rt))
             master_stimT = np.concatenate((master_stimT, animal_stimT))
 
     # Write out master data across animals
     assert np.shape(master_inpt)[0] == np.shape(master_y)[
         0], "inpt and y not same length"
-    assert np.shape(master_outcome)[0] == np.shape(master_y)[
-        0], "outcome and y not same length"
     assert len(np.unique(master_session)) == \
            np.shape(master_session_fold_lookup_table)[
                0], "number of unique sessions and session fold lookup don't " \
                    "match"
     normalized_inpt = np.copy(master_inpt)
-    normalized_inpt[:, 0] = preprocessing.scale(normalized_inpt[:, 0]) # ???
-    np.savez(processed_dmdm_data_path / 'all_animals_concat.npz',
-             normalized_inpt,
-             master_y, master_session)
+    normalized_inpt[:, 0] = preprocessing.scale(normalized_inpt[:, 0]) # normalize matrix
+    np.savez(
+        processed_dmdm_data_path / 'all_animals_concat.npz',
+        normalized_inpt, master_y, master_session, master_rt, master_stimT)
     np.savez(
         processed_dmdm_data_path / 'all_animals_concat_unnormalized.npz',
-        master_inpt, master_y, master_session)
+        master_inpt, master_y, master_session, master_rt, master_stimT)
     np.savez(
         processed_dmdm_data_path / 'all_animals_concat_session_fold_lookup.npz',
         master_session_fold_lookup_table)
-    np.savez(processed_dmdm_data_path / 'all_animals_concat_outcome.npz',
-             master_outcome)
-    np.savez(processed_dmdm_data_path / 'all_animals_concat_rt.npz',
-             master_rt, master_stimT)
-    np.savez(processed_dmdm_data_path / 'data_by_animal/' / 'animal_list.npz',
-             animal_list)
+    np.savez(
+        processed_dmdm_data_path / 'data_by_animal/' / 'animal_list.npz',
+        animal_list)
 
     out_json = json.dumps(final_animal_eid_dict)
     f = open(str(processed_dmdm_data_path) + "final_animal_eid_dict.json", "w")
@@ -158,10 +141,11 @@ def main(dname, *, req_num_sessions = 30, num_fold=5):
         inpt = normalized_inpt[range(start_idx, end_idx + 1)]
         y = master_y[range(start_idx, end_idx + 1)]
         session = master_session[range(start_idx, end_idx + 1)]
+        rt = master_rt[range(start_idx, end_idx + 1)]
+        stimT = master_stimT[range(start_idx, end_idx + 1)]
         counter += inpt.shape[0]
         np.savez(processed_dmdm_data_path / 'data_by_animal' / (animal + '_processed.npz'),
-                 inpt, y,
-                 session)
+                 inpt, y, session, rt, stimT)
     assert counter == master_inpt.shape[0]
 
 if __name__ == "__main__":

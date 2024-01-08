@@ -44,11 +44,12 @@ def get_all_unnormalized_data_this_session(eid, path_to_dataset):
                                                          outcome,
                                                          reactiontimes,
                                                          stimT)
+    y = np.expand_dims(outcome_noref, axis=1)
     session = [session_id for i in range(changesize.shape[0])]
     # You can add some criteria here and change codes to 
     # something like changesize[trials_to_study]
 
-    return animal, unnormalized_inpt, outcome_noref, session, reactiontimes, stimT
+    return animal, unnormalized_inpt, y, session, reactiontimes, stimT
 
 def get_raw_data(eid, path_to_dataset):
     print(eid)

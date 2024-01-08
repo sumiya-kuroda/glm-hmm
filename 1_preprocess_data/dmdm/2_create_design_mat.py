@@ -54,20 +54,20 @@ def main(dname, *, req_num_sessions = 30, num_folds=5):
         sess_counter = 0
         for eid in animal_eid_dict[animal]:
 
-            animal, unnormalized_inpt, outcome, session, reactiontimes, stimT = \
+            animal, unnormalized_inpt, y, session, reactiontimes, stimT = \
                 get_all_unnormalized_data_this_session(
                     eid, dmdm_data_path)
             
             if sess_counter == 0:
                 animal_unnormalized_inpt = np.copy(unnormalized_inpt)
-                animal_y = np.copy(outcome)
+                animal_y = np.copy(y)
                 animal_session = session
                 animal_rt = np.copy(reactiontimes)
                 animal_stimT = np.copy(stimT)
             else:
                 animal_unnormalized_inpt = np.vstack(
                     (animal_unnormalized_inpt, unnormalized_inpt))
-                animal_y = np.concatenate((animal_y, outcome))
+                animal_y = np.concatenate((animal_y, y))
                 animal_session = np.concatenate((animal_session, session))
                 animal_rt = np.concatenate((animal_rt, reactiontimes))
                 animal_stimT = np.concatenate((animal_stimT, stimT))

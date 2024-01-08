@@ -39,16 +39,16 @@ def get_all_unnormalized_data_this_session(eid, path_to_dataset):
 
     # Create design mat = matrix of size T x 6, with entries for
     # change size/change timing/past choice/past change timing/past choice timing/bias block
-    unnormalized_inpt = create_design_mat(changesize,
-                                          hazardblock,
-                                          outcome,
-                                          reactiontimes,
-                                          stimT)
+    unnormalized_inpt, outcome_noref = create_design_mat(changesize,
+                                                         hazardblock,
+                                                         outcome,
+                                                         reactiontimes,
+                                                         stimT)
     session = [session_id for i in range(changesize.shape[0])]
     # You can add some criteria here and change codes to 
     # something like changesize[trials_to_study]
 
-    return animal, unnormalized_inpt, outcome, session, reactiontimes, stimT
+    return animal, unnormalized_inpt, outcome_noref, session, reactiontimes, stimT
 
 def get_raw_data(eid, path_to_dataset):
     print(eid)
@@ -85,9 +85,11 @@ def create_design_mat(stim, hazardblock, outcome, reactiontimes, stimT):
 
     # previous choice vector:
     # hit = 1, FA = 2, miss = 0, abort = 3
+    # Ref trials are treated as FA here.
+    outcome_noref = ref2FA(outcome)
     # Hits in no change trials (where stim = 0) should also be regarded as FA, as from the mouse
-    # perspective they are licking prior to changes
-    previous_choice, locs_FA_abort = create_previous_choice_vector(outcome, stim)
+    # perspective they are licking prior to changes.
+    previous_choice, locs_FA_abort = create_previous_choice_vector(outcome_noref, stim)
     design_mat[:, 2] = previous_choice
 
     # previous change onset and reactiontime:
@@ -98,7 +100,12 @@ def create_design_mat(stim, hazardblock, outcome, reactiontimes, stimT):
     # previous hazard block
     design_mat[:, 5] = np.hstack([np.array(hazardblock[0]), hazardblock])[:-1]
 
-    return design_mat
+    return design_mat, outcome_noref
+
+def ref2FA(choice):
+    new_choice = choice.copy()
+    new_choice[new_choice == 4] = 2 # ref = 4, FA = 2
+    return new_choice
 
 def create_previous_choice_vector(choice, stim):
     ''' choice: choice vector of size T

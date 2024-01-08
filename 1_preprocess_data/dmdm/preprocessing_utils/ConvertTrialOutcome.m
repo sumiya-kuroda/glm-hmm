@@ -10,6 +10,8 @@ function new_arr = ConvertTrialOutcome(arr)
                 new_arr(i) = 0;
             case 'abort'
                 new_arr(i) = 3;
+            case 'Ref'
+                new_arr(i) = 4;
             otherwise
                 new_arr(i) = NaN;
         end

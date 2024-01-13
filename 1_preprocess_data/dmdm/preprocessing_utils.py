@@ -4,8 +4,8 @@ from scipy.stats import multinomial
 import json
 import os
 from pathlib import Path
-import scipy.io as io
-import pandas as pd
+from sklearn import preprocessing
+from ssm.util import one_hot
 
 def scan_sessions(path):
     matches = []
@@ -37,19 +37,20 @@ def get_all_unnormalized_data_this_session(eid, path_to_dataset):
     animal, session_id, changesize, hazardblock, outcome, reactiontimes, stimT \
         = get_raw_data(eid, path_to_dataset)
 
+    # Subset early blocks only:
+    trials_to_study = np.where((hazardblock == 0) | (hazardblock == 1))[0]
+
     # Create design mat = matrix of size T x 6, with entries for
     # change size/change timing/past choice/past change timing/past choice timing/bias block
-    unnormalized_inpt, outcome_noref = create_design_mat(changesize,
-                                                         hazardblock,
-                                                         outcome,
-                                                         reactiontimes,
-                                                         stimT)
+    unnormalized_inpt, outcome_noref = create_design_mat(changesize[trials_to_study],
+                                                         outcome[trials_to_study],
+                                                         reactiontimes[trials_to_study],
+                                                         stimT[trials_to_study])
+    
+    session = [session_id for i in range(changesize[trials_to_study].shape[0])]
     y = np.expand_dims(outcome_noref, axis=1)
-    session = [session_id for i in range(changesize.shape[0])]
-    # You can add some criteria here and change codes to 
-    # something like changesize[trials_to_study]
 
-    return animal, unnormalized_inpt, y, session, reactiontimes, stimT
+    return animal, unnormalized_inpt, y, session, reactiontimes[trials_to_study], stimT[trials_to_study]
 
 def get_raw_data(eid, path_to_dataset):
     print(eid)
@@ -69,37 +70,45 @@ def get_raw_data(eid, path_to_dataset):
 
     return animal, session_id, changesize, hazardblock, outcome, reactiontimes, stimT
 
-def create_design_mat(stim, hazardblock, outcome, reactiontimes, stimT):
+def create_design_mat(stim, outcome, reactiontimes, stimT):
     ''' 
     Create unnormalized input: with first column is changesize,
     second column as change onset. third column as previous choice, 
-    fourth column as previous change onset, fifth column as previous reaction time, 
-    sixth column as previous hazardblock
+    fourth column as previous change onset.
     ''' 
 
-    # changesize:
-    design_mat = np.zeros((len(stim), 6))
-    design_mat[:, 0] = stim
+    # Remap variables:
+    # We first treat ref trials as FA here to allow only four outcomes (Hit/FA/Miss/Abort).
+    # Hits in no change trials (where stim = 0) should also be regarded as FA, as from the mouse
+    # perspective they are licking prior to changes. 
+    # We then make change size and onset for FA and abort trials to be zero, 
+    # because from mouse perspectives, they did not realize that there was a change.
+    outcome_noref = ref2FA(outcome)
+    choice_updated, stim_updated, stimT_updated = remap_vals(outcome_noref, 
+                                                             stim, 
+                                                             stimT, 
+                                                             reactiontimes)
+    
+    # Change size:
+    design_mat = np.zeros((len(stim_updated), 6))
+    design_mat[:, 0] = stim_updated # unnormalized
 
-    # change onset:
-    design_mat[:, 1] = stimT
+    # Change onset:
+    design_mat[:, 1] = stimT_updated # unnormalized
+
+    # previous Change onset
+    # previous_stimT = np.hstack([np.array(stimT_updated[0]), stimT_updated])[:-1]
+    # design_mat[:, 1] = preprocessing.scale(previous_stimT)
 
     # previous choice vector:
-    # hit = 1, FA = 2, miss = 0, abort = 3
-    # Ref trials are treated as FA here.
-    outcome_noref = ref2FA(outcome)
-    # Hits in no change trials (where stim = 0) should also be regarded as FA, as from the mouse
-    # perspective they are licking prior to changes.
-    previous_choice, locs_FA_abort = create_previous_choice_vector(outcome_noref, stim)
-    design_mat[:, 2] = previous_choice
+    previous_choice, rewarded = create_previous_choice_vector(choice_updated)
+    design_mat[:, 2:6] = previous_choice
+    # design_mat[:, 4] = rewarded
 
     # previous change onset and reactiontime:
-    previous_stimT, previous_rt = create_previous_RT_vector(stimT, reactiontimes, locs_FA_abort)
-    design_mat[:, 3] = previous_stimT
-    design_mat[:, 4] = previous_rt
-
-    # previous hazard block
-    design_mat[:, 5] = np.hstack([np.array(hazardblock[0]), hazardblock])[:-1]
+    # previous_stimT, previous_rt = create_previous_RT_vector(stimT, reactiontimes, locs_FA_abort)
+    # design_mat[:, 3] = previous_stimT
+    # design_mat[:, 4] = previous_rt
 
     return design_mat, outcome_noref
 
@@ -108,22 +117,48 @@ def ref2FA(choice):
     new_choice[new_choice == 4] = 2 # ref = 4, FA = 2
     return new_choice
 
-def create_previous_choice_vector(choice, stim):
-    ''' choice: choice vector of size T
-        previous_choice : vector of size T with previous choice made by animal
-                          output is in {0, 1, 2, 3}, where hit with changes = 1, FA = 2, 
-                          miss = 0, abort = 3. We also make no change hit = 2 here.
-        locs_FA_abort: locations of FA or abort happened.
+def remap_vals(choice, stim, stimT, rt, delay=0.5):
+    ''' choice: choice vector of size T. 
+                By default, hit = 1, FA = 2, miss = 0, abort = 3
+        stimT: change size vector of size T
+        stimT: change onset vector of size T
     '''
-    locs_nochangehit = np.intersect1d(np.where(stim == 0)[0], np.where(choice == 1)[0])
-    locs_FA_abort = np.where((choice == 2) | (choice == 3))[0]
 
+    # Treat hits in no change trials (where stim = 0) as FA
+    locs_nochangehit = np.intersect1d(np.where(stim == 0)[0], np.where(choice == 1)[0])
     choice_updated = choice.copy()
     for i, loc in enumerate(locs_nochangehit):
-        choice_updated[loc] = 2
-    
-    previous_choice = np.hstack([np.array(choice_updated[0]), choice_updated])[:-1]
-    return previous_choice, locs_FA_abort
+        choice_updated[loc] = 2 # FA = 2
+
+    # Make change sizes of FA and abort trials to be zero (no change FA trials are already zero)
+    # Also, make a change onset of FA and abort trials to be reactiontimes - delay
+    locs_FA_abort = np.where((choice_updated == 2) | (choice_updated == 3))[0]
+    stim_updated = stim.copy()
+    stimT_updated  = stimT.copy()
+    for i, loc in enumerate(locs_FA_abort):
+        stim_updated[loc] = 0 
+        stimT_updated[loc] = rt[loc] - delay
+
+    # Make a change onset of miss trials to be a full length of that trial
+    locs_miss = np.where(choice_updated == 0)[0]
+    for i, loc in enumerate(locs_miss):
+        stimT_updated[loc] = stimT_updated[loc] + 2.15
+
+    return choice_updated, stim_updated, stimT_updated
+
+def create_previous_choice_vector(choice):
+    # The original choice vectors are
+    # hit with changes = 1, FA = 2, miss = 0, abort = 3.
+    # We will one-hot encode this vector as well as create a new vector about
+    # whther mice got rewarded or punished
+    previous_choice = np.hstack([np.array(choice[0]), choice])[:-1]
+    # C = len(np.unique(choice)) but some sessions do not have aborts
+    one_hot_prev_choice = one_hot(previous_choice, 4)
+
+    choice_mapping = {1: 1, 2: -1, 0: 0, 3: 0}
+    prev_rewarded = [choice_mapping[old_choice] for old_choice in choice]
+
+    return one_hot_prev_choice, prev_rewarded
 
 def create_previous_RT_vector(stimT, reactiontimes, locs_FA_abort):
     ''' stimT: change onset vector of size T
@@ -150,7 +185,7 @@ def create_train_test_sessions(session, num_folds=5):
                                  np.ceil(num_sessions / num_folds))
     shuffled_folds = npr.permutation(unshuffled_folds)[:num_sessions]
     assert len(np.unique(
-        shuffled_folds)) == 5, "require at least one session per fold for " \
+        shuffled_folds)) == num_folds, "require at least one session per fold for " \
                                "each animal!"
     # Look up table of shuffle-folds:
     sess_id = np.array(np.unique(session), dtype='str')

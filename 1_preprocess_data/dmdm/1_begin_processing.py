@@ -33,7 +33,9 @@ def main(dname):
     # Find sessions with bias blocks
     for eid in eids:
         bias = np.load(Path(eid) / '_dmdm_trials.hazardblock.npy')[0]
-        if ~np.isnan(bias).any(): # nan means that trial was neither early nor late
+        if ~np.isnan(bias).any() and np.isin(0, bias).any(): 
+            # nan means that trial was neither early nor late
+            # this assures that the session contains at least early blocks
             animal = get_animal_name(eid)
             if animal not in animal_list:
                 animal_list.append(animal)

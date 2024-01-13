@@ -70,7 +70,7 @@ def plot_input_vectors(Ws,
     M = Ws.shape[2] - 1 # exclude bias just for clarification purpose
 
     # hit = 1, FA = 2, miss = 0, abort = 3
-    choice_label_mapping = {1: 'Hit', 0: 'miss', 2: 'FA', 3: 'abort'}
+    choice_label_mapping = {0: 'miss', 1: 'Hit', 2: 'FA', 3: 'abort'}
 
     fig = plt.figure(figsize=(7, 9), dpi=80, facecolor='w', edgecolor='k')
     plt.subplots_adjust(left=0.15,
@@ -82,9 +82,9 @@ def plot_input_vectors(Ws,
 
     for j in range(K):
         lines = []
-        for k in range(K_prime - 1): # each category 
+        for k in range(K_prime): # each category 
             l = plt.plot(range(M + 1), 
-                         -Ws[j][k], 
+                         Ws[j][k], # plot weights with orginal signs
                          marker='o',
                          label=choice_label_mapping[k])
             plt.ylim((-3, 6))

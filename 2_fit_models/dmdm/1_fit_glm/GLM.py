@@ -17,7 +17,7 @@ class glm(object):
         self.M = M
         self.C = C
         # Parameters linking input to state distribution
-        self.Wk = npr.randn(1, C - 1, M + 1)
+        self.Wk = npr.randn(1, C, M + 1)
 
     @property
     def params(self):
@@ -36,16 +36,20 @@ class glm(object):
         # Update input to include offset term at the end:
         input = np.append(input, np.ones((input.shape[0], 1)), axis=1)
         # Add additional row (of zeros) to second dimension of self.Wk
-        Wk_tranpose = np.transpose(self.Wk, (1, 0, 2))
-        Wk = np.transpose(
-            np.vstack([
-                Wk_tranpose,
-                np.zeros((1, Wk_tranpose.shape[1], Wk_tranpose.shape[2]))
-            ]), (1, 0, 2))
+        # Wk_tranpose = np.transpose(self.Wk, (1, 0, 2))
+        # Wk = np.transpose(
+        #     np.vstack([
+        #         Wk_tranpose,
+        #         np.zeros((1, Wk_tranpose.shape[1], Wk_tranpose.shape[2]))
+        #     ]), (1, 0, 2))
         # Input effect; transpose so that output has dims TxKxC
-        time_dependent_logits = np.transpose(np.dot(Wk, input.T), (2, 0, 1))
+        time_dependent_logits = np.transpose(np.dot(self.Wk, input.T), (2, 0, 1))
+        print('a')
+        print(time_dependent_logits.shape)
         time_dependent_logits = time_dependent_logits - logsumexp(
             time_dependent_logits, axis=2, keepdims=True)
+        print('b')
+        print(logsumexp(time_dependent_logits, axis=2, keepdims=True).shape)
         return time_dependent_logits
 
     # Calculate log-likelihood of observed data
@@ -71,7 +75,7 @@ class glm(object):
                 inputs,
                 masks,
                 tags,
-                num_iters=1000,
+                num_iters=5000,
                 optimizer="bfgs",
                 **kwargs):
         optimizer = dict(adam=adam, bfgs=bfgs, rmsprop=rmsprop,
@@ -82,7 +86,10 @@ class glm(object):
             obj = self.log_marginal(datas, inputs, masks, tags)
             return -obj
 
-        self.params = optimizer(_objective,
-                                self.params,
-                                num_iters=num_iters,
-                                **kwargs)
+        Wk_1d = optimizer(_objective, 
+                          self.params,
+                          num_iters=num_iters,
+                          **kwargs)
+        
+        # weights are flattened in 1d by default
+        self.params = np.reshape(Wk_1d, (self.C, -1))[None,:,:]

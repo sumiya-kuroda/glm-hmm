@@ -28,8 +28,8 @@ def load_session_fold_lookup(file_path):
 
 
 
-def fit_glm(inputs, datas, M, C):
-    new_glm = glm(M, C)
+def fit_glm(inputs, datas, M, C, outcome_dict):
+    new_glm = glm(M, C, outcome_dict)
     new_glm.fit_glm(datas, inputs, masks=None, tags=None)
     # Get loglikelihood of training data:
     loglikelihood_train = new_glm.log_marginal(datas, inputs, None, None)
@@ -37,15 +37,15 @@ def fit_glm(inputs, datas, M, C):
     return loglikelihood_train, recovered_weights
 
 
-# Append column of zeros to weights matrix in appropriate location
-def append_zeros(weights):
-    weights_tranpose = np.transpose(weights, (1, 0, 2))
-    weights = np.transpose(
-        np.vstack([
-            weights_tranpose,
-            np.zeros((1, weights_tranpose.shape[1], weights_tranpose.shape[2]))
-        ]), (1, 0, 2))
-    return weights
+# # Append column of zeros to weights matrix in appropriate location
+# def append_zeros(weights):
+#     weights_tranpose = np.transpose(weights, (1, 0, 2))
+#     weights = np.transpose(
+#         np.vstack([
+#             weights_tranpose,
+#             np.zeros((1, weights_tranpose.shape[1], weights_tranpose.shape[2]))
+#         ]), (1, 0, 2))
+#     return weights
 
 
 def load_animal_list(list_file):

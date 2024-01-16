@@ -19,6 +19,7 @@ def fit_glm(inputs, datas, M, C):
     new_glm = glm(M, C)
     new_glm.fit_glm(datas, inputs, masks=None, tags=None)
     # Get loglikelihood of training data:
+    print('fitting done!!!!!!')
     loglikelihood_train = new_glm.log_marginal(datas, inputs, None, None)
     recovered_weights = new_glm.Wk
     return loglikelihood_train, recovered_weights
@@ -66,7 +67,7 @@ def plot_input_vectors(Ws,
                         hspace=0.3)
 
     for j in range(K):
-        for k in range(K_prime - 1):
+        for k in range(K_prime): # each category
             # plt.subplot(K, K_prime, 1+j*K_prime+k)
             plt.plot(range(M + 1), -Ws[j][k], marker='o')
             plt.plot(range(-1, M + 2), np.repeat(0, M + 3), 'k', alpha=0.2)

@@ -44,24 +44,25 @@ Then, activate the conda environment by running
 Launch Jupyter as
 ```sh
 export XDG_RUNTIME_DIR="" # See https://swc-neuro.slack.com/archives/CHLGTQVLL/p1560422985006700
-jupyter lab --port=2024
+jupyter lab --port=2025
 ```
-Following [this procedure](https://github.com/pierreglaser/jupyter-slurm-setup-instructions) will make you able to connect to the Jupter notebook on HPC with [`http://127.0.0.1:2024/lab`](http://127.0.0.1:2024/lab) using your web browser. I personally use VSCode, so I will simply run `ssh -q -N ${jupyter_host_name} -L 2024:localhost:2024` to port forwarding ([ref](https://swc-neuro.slack.com/archives/C0116D5V7SA/p1645618426952349)). I then follow [this step](https://github.com/microsoft/vscode-jupyter/discussions/13145) and simply copy and paste the jupyter URL within HPC. We will use Jupyter when we run GLMs on preprocessed data. The first prerpocessing step does not require Jupyter, and you can simply run on a decent computing node.
+Following [this procedure](https://github.com/pierreglaser/jupyter-slurm-setup-instructions) will make you able to connect to the Jupter notebook on HPC with [`http://127.0.0.1:2025/lab`](http://127.0.0.1:2024/lab) using your web browser. I personally use VSCode, so I will simply run `ssh -q -N ${jupyter_host_name} -L 2025:localhost:2025` from another HPC terminal to port forwarding ([ref](https://swc-neuro.slack.com/archives/C0116D5V7SA/p1645618426952349)). I then follow [this step](https://github.com/microsoft/vscode-jupyter/discussions/13145) and simply copy and paste the jupyter URL within HPC. We will use Jupyter when we run GLMs on preprocessed data. The first prerpocessing step does not require Jupyter, and you can simply run on a decent computing node.
 
 ## Run GLM-HMM
 Code is ordered so that the dataset is preprocessed into the desired format and fitting parameters are efficiently initialized. 
 
 ### 1_preprocess_data 
-Within this directory, run the scripts in the order indicated by the number at the beginning of the file name. For dmdm dataset, run `0_convert_behavior_dataset.sh` first. This script converts raw behavior data saved in .mat to Ashwood's GLM-HMM-friendly .npy format. You also need to be cautious that, even for the dmdm dataset, animals' behaviors are stored slightly different between projects. This shell scirpt therefore requires both a path to .mat file as well as which format the .mat file uses. This makes `data` folder with the behavior converted and saved in .npy.
+This creates `data` folder. Within this directory, run the scripts in the order indicated by the number at the beginning of the file name. For dmdm dataset, run `0_convert_behavior_dataset.sh` first. This script converts raw behavior data saved in .mat to Ashwood's GLM-HMM-friendly .npy format. You also need to be cautious that, even for the dmdm dataset, animals' behaviors are stored slightly different between projects. This shell scirpt therefore requires both a path to .mat file as well as which format the .mat file uses.
 
 Then run `1_begin_processing.py` and `2_create_design_mat.py` to obtain the design matrix used as input for all of the models. If you want to reproduce Ashwood's results on IBL dataset, follow the steps on her repo. 
 
 ### 2_fit_models
-Next, you can fit the GLM, lapse and GLM-HMM models discussed in the paper using the code contained in this folder. Codes for dmdm dataset are organized separately under `dmdm/` from Ashwood's original codes for IBL. As discussed in the paper, the GLM should be run first as the GLM fit is used to initialize the global GLM-HMM (the model that is fit with data from all animals). Here we use Jupyter and `dask` to get the advantage of HPC ([Best Practices](https://docs.dask.org/en/stable/delayed-best-practices.html)).
+This creates `results` folder. With the processed dataset, you can fit the GLM, lapse and GLM-HMM models discussed in the paper using the code contained in this folder. Codes for dmdm dataset are organized separately under `dmdm/` from Ashwood's original codes for IBL. As discussed in the paper, the GLM should be run first as the GLM fit is used to initialize the global GLM-HMM (the model that is fit with data from all animals). Here we use Jupyter and `dask` to get the advantage of HPC ([Best Practices](https://docs.dask.org/en/stable/delayed-best-practices.html)). Because the dmdm task has more than two discrete choices, weights also need to be optimized by considering that complexity. We therefore use the [random utility maximization nested logit (RUMNL)](https://journals.sagepub.com/doi/10.1177/1536867X0200200301) model as a potential distribution that underlies the animals' outcomes.
 
-We then fit the lapse model to the dataset, while not used for any initialization purposes, so as to be able to perform model comparison with the global and individual GLM-HMMs. 
 
 The global GLM-HMM should be run next, as it is used to initialize the models for all individual animals. Finally GLM-HMMs can be fit to the data from individual animals using the code in the associated directory. 
+
+It is optional to fit the lapse model to the dataset. While not used for any initialization purposes, this allows model comparison with the global and individual GLM-HMMs. 
           
 ### 3_make_figures
 Assuming that you have downloaded and preprocessed the datasets, and that you have fit all models on these datasets,  you can reproduce the figures of our paper corresponding to the IBL dataset by running the code contained in "3_make_figures".  In order to produce Figures 5 and 7, replace the IBL URL in the preprocessing pipeline scripts, with the URLs for the [Odoemene et al. (2018)](https://doi.org/10.14224/1.38944) and [Urai et al. (2017)](https://doi.org/10.6084/m9.figshare.4300043) datasets, and rerun the GLM, lapse and GLM-HMM models on these datasets before running the provided figure plotting code.

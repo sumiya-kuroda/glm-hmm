@@ -1,8 +1,10 @@
 # some additional functions for GLM with discrete choices
 import autograd.numpy as np
+import autograd.numpy.random as npr
 from autograd.scipy.special import logsumexp
 from ssm.util import one_hot
 import numpy as onp
+npr.seed(65)  # set seed in case of randomization
 
 def binary_similarity(x=None, y=None):
     if np.max(x) > 1:
@@ -83,7 +85,8 @@ def calculate_NestedMultinominalLogit(arr, od, taus_list: list, C):
     lsei = logsumexpiv(IVs_for_logsumexpvi2, taus_list, C, axis=2, keepdims=True)
     out1 = np.add(np.divide(arr, taus_arr), np.multiply((taus_arr-1), IVs_arr))
     out2 = np.add(out1, -lsei) # a/tau - IV + tau IV - logsumexpiv
-
+    # https://gregorygundersen.com/blog/2020/02/09/log-sum-exp/
+    
     return out2
 
 def nested_categorical_logpdf(data, logits, mask=None):

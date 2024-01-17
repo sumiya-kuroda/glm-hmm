@@ -90,11 +90,11 @@ def create_design_mat(stim, outcome, reactiontimes, stimT):
                                                              reactiontimes)
     
     # Change size:
-    design_mat = np.zeros((len(stim_updated), 6))
-    design_mat[:, 0] = stim_updated # unnormalized
+    design_mat = np.zeros((len(stim_updated), 11))
+    design_mat[:, 0:6] = stim_updated # unnormalized
 
     # Change onset:
-    design_mat[:, 1] = stimT_updated # unnormalized
+    design_mat[:, 6] = stimT_updated # unnormalized
 
     # previous Change onset
     # previous_stimT = np.hstack([np.array(stimT_updated[0]), stimT_updated])[:-1]
@@ -102,7 +102,7 @@ def create_design_mat(stim, outcome, reactiontimes, stimT):
 
     # previous choice vector:
     previous_choice, rewarded = create_previous_choice_vector(choice_updated)
-    design_mat[:, 2:6] = previous_choice
+    design_mat[:, 7:11] = previous_choice
     # design_mat[:, 4] = rewarded
 
     # previous change onset and reactiontime:
@@ -133,10 +133,10 @@ def remap_vals(choice, stim, stimT, rt, delay=0.5):
     # Make change sizes of FA and abort trials to be zero (no change FA trials are already zero)
     # Also, make a change onset of FA and abort trials to be reactiontimes - delay
     locs_FA_abort = np.where((choice_updated == 2) | (choice_updated == 3))[0]
-    stim_updated = stim.copy()
+    stim_updated = one_hot_stim(stim)
     stimT_updated  = stimT.copy()
     for i, loc in enumerate(locs_FA_abort):
-        stim_updated[loc] = 0 
+        stim_updated[loc, 0] = 0
         stimT_updated[loc] = rt[loc] - delay
 
     # Make a change onset of miss trials to be a full length of that trial
@@ -145,6 +145,18 @@ def remap_vals(choice, stim, stimT, rt, delay=0.5):
         stimT_updated[loc] = stimT_updated[loc] + 2.15
 
     return choice_updated, stim_updated, stimT_updated
+
+def one_hot_stim(stim):
+    stim_mapping = {100: 0, 
+                    125: 1, 
+                    135: 2, 
+                    150: 3,
+                    200:4,
+                    400:5}
+    stim_int = [stim_mapping[int(s)] for s in stim*100]
+    soh = one_hot(stim_int, 6)
+    print(soh.shape)
+    return soh
 
 def create_previous_choice_vector(choice):
     # The original choice vectors are

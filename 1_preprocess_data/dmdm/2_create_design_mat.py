@@ -113,8 +113,8 @@ def main(dname, *, req_num_sessions = 30, num_folds=5):
                0], "number of unique sessions and session fold lookup don't " \
                    "match"
     normalized_inpt = np.copy(master_inpt)
-    normalized_inpt[:, 0] = preprocessing.scale(normalized_inpt[:, 0], with_mean=False) # normalize stim size
-    normalized_inpt[:, 1] = preprocessing.scale(normalized_inpt[:, 1], with_mean=False) # normalize stim onset
+    # normalized_inpt[:, 0] = preprocessing.scale(normalized_inpt[:, 0], with_mean=False) # normalize stim size
+    # normalized_inpt[:, 1] = preprocessing.scale(normalized_inpt[:, 1], with_mean=False) # normalize stim onset
     np.savez(
         processed_dmdm_data_path / 'all_animals_concat.npz',
         normalized_inpt, master_y, master_session, master_rt, master_stimT)

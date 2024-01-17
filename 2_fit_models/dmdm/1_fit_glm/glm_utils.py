@@ -84,7 +84,7 @@ def plot_input_vectors(Ws,
                          Ws[j][k], # plot weights with orginal signs
                          marker='o',
                          label=choice_label_mapping[k])
-            plt.ylim((-3, 6))
+            plt.ylim((-10, 10))
             plt.xlim(-1, M+1)
             lines.append(l)
         

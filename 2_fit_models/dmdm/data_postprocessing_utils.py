@@ -319,28 +319,6 @@ def calculate_cv_bit_trial(ll_model, ll_0, n_trials):
     return cv_bit_trial
 
 
-def create_cv_frame_for_plotting(cv_file):
-    cvbt_folds_model = load_cv_arr(cv_file)
-    glm_lapse_model = cvbt_folds_model[:3, ]
-    idx = np.array([0, 3, 4, 5, 6])
-    cvbt_folds_model = cvbt_folds_model[idx, :]
-    # Identify best cvbt:
-    mean_cvbt = np.mean(cvbt_folds_model, axis=1)
-    loc_best = np.where(mean_cvbt == max(mean_cvbt))[0]
-    best_val = max(mean_cvbt)
-    # Create dataframe for plotting
-    num_models = cvbt_folds_model.shape[0]
-    num_folds = cvbt_folds_model.shape[1]
-    # Create pandas dataframe:
-    data_for_plotting_df = pd.DataFrame({
-        'model':
-            np.repeat(np.arange(num_models), num_folds),
-        'cv_bit_trial':
-            cvbt_folds_model.flatten()
-    })
-    return data_for_plotting_df, loc_best, best_val, glm_lapse_model
-
-
 def get_file_name_for_best_model_fold(cvbt_folds_model, K, overall_dir,
                                       best_init_cvbt_dict):
     '''

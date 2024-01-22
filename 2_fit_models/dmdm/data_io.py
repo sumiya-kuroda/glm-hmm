@@ -5,7 +5,7 @@ from pathlib import Path
 
 npr.seed(65)
 
-def get_file_dir():
+def get_file_dir(): # dmdm dir
     return Path(os.path.dirname(os.path.realpath(__file__)))
 
 # Load data

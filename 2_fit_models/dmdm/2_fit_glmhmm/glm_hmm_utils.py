@@ -5,15 +5,14 @@ import autograd.numpy as np
 import autograd.numpy.random as npr
 from pathlib import Path
 import os
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+sys.path.append('../') 
+from data_labels import create_cv_frame_for_plotting
 
 npr.seed(65)
 
-def load_glm_vectors(glm_vectors_file):
-    container = np.load(glm_vectors_file)
-    data = [container[key] for key in container]
-    loglikelihood_train = data[0]
-    recovered_weights = data[1]
-    return loglikelihood_train, recovered_weights
 
 def load_global_params(global_params_file):
     container = np.load(global_params_file, allow_pickle=True)
@@ -46,7 +45,7 @@ def fit_glm_hmm(datas, inputs, masks, K, D, M, C, N_em_iters,
         this_hmm = ssm.HMM(K,
                            D,
                            M,
-                           observations="input_driven_obs",
+                           observations="input_driven_obs_multinominal",
                            observation_kwargs=dict(C=C,
                                                    prior_sigma=prior_sigma),
                            transitions="sticky",
@@ -86,49 +85,26 @@ def fit_glm_hmm(datas, inputs, masks, K, D, M, C, N_em_iters,
         np.savez(save_title, this_hmm.params, lls)
     return None
 
+def plot_states(weight_vectors,
+                log_transition_matrix,
+                cv_file,
+                cv_file_train,
+                figure_directory,
+                K,
+                save_title='best_params_cross_validation_K_',
+                labels_for_plot=[],
+                cols_K = ["#e74c3c", "#15b01a", "#7e1e9c", "#3498db", "#f97306"],
+                cols = ["#7e1e9c", "#0343df", "#15b01a", "#bf77f6", "#95d0fc","#96f97b"]):
 
-data_dir = '../../data/ibl/data_for_cluster/'
-results_dir = '../../results/ibl_global_fit/'
-save_directory = data_dir + "best_global_params/"
+    M = weight_vectors.shape[2] - 1
+    data_for_plotting_df, loc_best, best_val, glm_lapse_model = \
+        create_cv_frame_for_plotting(cv_file)
+    train_data_for_plotting_df, train_loc_best, train_best_val, \
+    train_glm_lapse_model = create_cv_frame_for_plotting(cv_file_train)
 
-if not os.path.exists(save_directory):
-    os.makedirs(save_directory)
-
-labels_for_plot = ['stim', 'pc', 'wsls', 'bias']
-
-cv_file = results_dir + "/cvbt_folds_model.npz"
-cvbt_folds_model = load_cv_arr(cv_file)
-
-for K in range(2, 6):
-    print("K = " + str(K))
-    with open(results_dir + "/best_init_cvbt_dict.json", 'r') as f:
-        best_init_cvbt_dict = json.load(f)
-
-    # Get the file name corresponding to the best initialization for
-    # given K value
-    raw_file = get_file_name_for_best_model_fold(
-        cvbt_folds_model, K, results_dir, best_init_cvbt_dict)
-    hmm_params, lls = load_glmhmm_data(raw_file)
-
-    # Calculate permutation
-    permutation = calculate_state_permutation(hmm_params)
-    print(permutation)
-
-    # Save parameters for initializing individual fits
-    weight_vectors = hmm_params[2][permutation]
-    log_transition_matrix = permute_transition_matrix(
-        hmm_params[1][0], permutation)
-    init_state_dist = hmm_params[0][0][permutation]
-    params_for_individual_initialization = [[init_state_dist],
-                                            [log_transition_matrix],
-                                            weight_vectors]
-
-    np.savez(
-        save_directory + 'best_params_K_' + str(K) + '.npz',
-        params_for_individual_initialization)
-
-    # Plot these too:
-    cols = ["#e74c3c", "#15b01a", "#7e1e9c", "#3498db", "#f97306"]
+    glm_lapse_model_cvbt_means = np.mean(glm_lapse_model, axis=1)
+    train_glm_lapse_model_cvbt_means = np.mean(train_glm_lapse_model, axis=1)
+    
     fig = plt.figure(figsize=(4 * 8, 10),
                         dpi=80,
                         facecolor='w',
@@ -139,14 +115,14 @@ for K in range(2, 6):
                         top=0.7,
                         wspace=0.8,
                         hspace=0.5)
+    
     plt.subplot(1, 3, 1)
-    M = weight_vectors.shape[2] - 1
     for k in range(K):
         plt.plot(range(M + 1),
                     -weight_vectors[k][0],
                     marker='o',
                     label='State ' + str(k + 1),
-                    color=cols[k],
+                    color=cols_K[k],
                     lw=4)
     plt.xticks(list(range(0, len(labels_for_plot))),
                 labels_for_plot,
@@ -186,22 +162,6 @@ for K in range(2, 6):
     plt.title("Retrieved", fontsize=40)
 
     plt.subplot(1, 3, 3)
-    cols = [
-        "#7e1e9c", "#0343df", "#15b01a", "#bf77f6", "#95d0fc",
-        "#96f97b"
-    ]
-    cv_file = results_dir + "/cvbt_folds_model.npz"
-    data_for_plotting_df, loc_best, best_val, glm_lapse_model = \
-        create_cv_frame_for_plotting(
-        cv_file)
-    cv_file_train = results_dir + "/cvbt_train_folds_model.npz"
-    train_data_for_plotting_df, train_loc_best, train_best_val, \
-    train_glm_lapse_model = create_cv_frame_for_plotting(
-        cv_file_train)
-
-    glm_lapse_model_cvbt_means = np.mean(glm_lapse_model, axis=1)
-    train_glm_lapse_model_cvbt_means = np.mean(train_glm_lapse_model,
-                                                axis=1)
     g = sns.lineplot(
         data_for_plotting_df['model'],
         data_for_plotting_df['cv_bit_trial'],
@@ -243,5 +203,6 @@ for K in range(2, 6):
     plt.title("Model Comparison", fontsize=40)
     fig.tight_layout()
 
-    fig.savefig(results_dir + 'best_params_cross_validation_K_' +
-                str(K) + '.png')
+    fig.savefig(figure_directory / (save_title + str(K) + '.png'))
+    plt.axis('off')
+    plt.close(fig)

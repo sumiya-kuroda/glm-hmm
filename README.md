@@ -59,10 +59,11 @@ Then run `1_begin_processing.py` and `2_create_design_mat.py` to obtain the desi
 ### 2_fit_models
 This creates `results` folder. With the processed dataset, you can fit the GLM, lapse and GLM-HMM models discussed in the paper using the code contained in this folder. Codes for dmdm dataset are organized separately under `dmdm/` from Ashwood's original codes for IBL. As discussed in the paper, the GLM should be run first as the GLM fit is used to initialize the global GLM-HMM (the model that is fit with data from all animals). Here we use Jupyter and `dask` to get the advantage of HPC ([Best Practices](https://docs.dask.org/en/stable/delayed-best-practices.html)). Because the dmdm task has more than two discrete choices, weights also need to be optimized by considering that complexity. We therefore use the [random utility maximization nested logit (RUMNL)](https://journals.sagepub.com/doi/10.1177/1536867X0200200301) model as a potential distribution that underlies the animals' outcomes.
 
+After GLM fitting, you should be able to run GLM-HMM. The global GLM-HMM should be run next, as it explores all the parameter space and find a possible parameter candidate for fitting GLM-HMM to individual animal. As Ashwood described in her paper, we use EM algorithm here, which takes quite a lot of computational resources. Thus HPC usage is highly recommended. 
 
-The global GLM-HMM should be run next, as it is used to initialize the models for all individual animals. Finally GLM-HMMs can be fit to the data from individual animals using the code in the associated directory. 
+Finally GLM-HMMs can be fit to the data from individual animals using the code in the associated directory. 
 
-It is optional to fit the lapse model to the dataset. While not used for any initialization purposes, this allows model comparison with the global and individual GLM-HMMs. 
+It is completely optional to fit the lapse model to the dataset. While not used for any initialization purposes, this allows model comparison with the global and individual GLM-HMMs. 
           
 ### 3_make_figures
 Assuming that you have downloaded and preprocessed the datasets, and that you have fit all models on these datasets,  you can reproduce the figures of our paper corresponding to the IBL dataset by running the code contained in "3_make_figures".  In order to produce Figures 5 and 7, replace the IBL URL in the preprocessing pipeline scripts, with the URLs for the [Odoemene et al. (2018)](https://doi.org/10.14224/1.38944) and [Urai et al. (2017)](https://doi.org/10.6084/m9.figshare.4300043) datasets, and rerun the GLM, lapse and GLM-HMM models on these datasets before running the provided figure plotting code.

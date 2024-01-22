@@ -45,7 +45,8 @@ def get_all_unnormalized_data_this_session(eid, path_to_dataset):
     unnormalized_inpt, outcome_noref = create_design_mat(changesize[trials_to_study],
                                                          outcome[trials_to_study],
                                                          reactiontimes[trials_to_study],
-                                                         stimT[trials_to_study])
+                                                         stimT[trials_to_study],
+                                                         hazardblock[trials_to_study])
     
     session = [session_id for i in range(changesize[trials_to_study].shape[0])]
     y = np.expand_dims(outcome_noref, axis=1)
@@ -70,7 +71,7 @@ def get_raw_data(eid, path_to_dataset):
 
     return animal, session_id, changesize, hazardblock, outcome, reactiontimes, stimT
 
-def create_design_mat(stim, outcome, reactiontimes, stimT):
+def create_design_mat(stim, outcome, reactiontimes, stimT, hazard):
     ''' 
     Create unnormalized input: with first column is changesize,
     second column as change onset. third column as previous choice, 
@@ -95,6 +96,7 @@ def create_design_mat(stim, outcome, reactiontimes, stimT):
 
     # Change onset:
     design_mat[:, 1] = stimT_updated # unnormalized
+    # design_mat[:, 1] = hazard
 
     # previous Change onset
     # previous_stimT = np.hstack([np.array(stimT_updated[0]), stimT_updated])[:-1]

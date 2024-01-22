@@ -84,7 +84,7 @@ def plot_input_vectors(Ws,
                          Ws[j][k], # plot weights with orginal signs
                          marker='o',
                          label=choice_label_mapping[k])
-            plt.ylim((-3, 6))
+            plt.ylim((-70, 70))
             plt.xlim(-1, M+1)
             lines.append(l)
         
@@ -104,5 +104,106 @@ def plot_input_vectors(Ws,
     fig.suptitle("GLM Weights: " + title, y=0.99, fontsize=14)
 
     fig.savefig(figure_directory / ('glm_weights_' + save_title + '.png'))
+    plt.axis('off')
+    plt.close(fig)
+
+
+def plot_logOR_hit_vs_miss(Ws,
+                           figure_directory,
+                           title='true',
+                           save_title="true",
+                           labels_for_plot=[]):
+    K = Ws.shape[0]
+    K_prime = Ws.shape[1] # C
+    M = Ws.shape[2] - 1 # exclude bias just for clarification purpose
+
+    # hit = 1, FA = 2, miss = 0, abort = 3
+    choice_label_mapping = {0: 'miss', 1: 'Hit', 2: 'FA', 3: 'abort'}
+
+    outcome_list = [0, 1]
+
+    fig = plt.figure(figsize=(7, 9), dpi=80, facecolor='w', edgecolor='k')
+    plt.subplots_adjust(left=0.15,
+                        bottom=0.27,
+                        right=0.95,
+                        top=0.95,
+                        wspace=0.3,
+                        hspace=0.3)
+
+    for j in range(K):
+        lines = []
+        for k in outcome_list: # each category 
+            l = plt.plot(range(M + 1), 
+                         Ws[j][1] - Ws[j][0], # plot weights with orginal signs
+                         marker='o',
+                         label=choice_label_mapping[k])
+            plt.ylim((-4, 5))
+            plt.xlim(-1, M+1)
+        
+        plt.axhline(y=0, color="k", alpha=0.5, ls="--")
+        plt.xticks(list(range(0, len(labels_for_plot))),
+                    labels_for_plot,
+                    rotation='90',
+                    fontsize=12)
+    fig.text(0.04,
+             0.5,
+             "Weight",
+             ha="center",
+             va="center",
+             rotation=90,
+             fontsize=15)
+    fig.suptitle("GLM Weights: " + title, y=0.99, fontsize=14)
+
+    fig.savefig(figure_directory / ('glm_hit_vs_miss_' + save_title + '.png'))
+    plt.axis('off')
+    plt.close(fig)
+
+def plot_logOR_FA_vs_abort(Ws,
+                           figure_directory,
+                           title='true',
+                           save_title="true",
+                           labels_for_plot=[]):
+    K = Ws.shape[0]
+    K_prime = Ws.shape[1] # C
+    M = Ws.shape[2] - 1 # exclude bias just for clarification purpose
+
+    # hit = 1, FA = 2, miss = 0, abort = 3
+    choice_label_mapping = {0: 'miss', 1: 'Hit', 2: 'FA', 3: 'abort'}
+
+    outcome_list = [2, 3]
+
+    fig = plt.figure(figsize=(7, 9), dpi=80, facecolor='w', edgecolor='k')
+    plt.subplots_adjust(left=0.15,
+                        bottom=0.27,
+                        right=0.95,
+                        top=0.95,
+                        wspace=0.3,
+                        hspace=0.3)
+
+    for j in range(K):
+        lines = []
+        for k in outcome_list: # each category 
+            l = plt.plot(range(M + 1), 
+                         Ws[j][2] - Ws[j][3], # plot weights with orginal signs
+                         marker='o',
+                         label=choice_label_mapping[k])
+            plt.ylim((-4, 5))
+            plt.xlim(-1, M+1)
+        
+        plt.axhline(y=0, color="k", alpha=0.5, ls="--")
+        plt.xticks(list(range(0, len(labels_for_plot))),
+                    labels_for_plot,
+                    rotation='90',
+                    fontsize=12)
+    fig.text(0.04,
+             0.5,
+             "Weight",
+             ha="center",
+             va="center",
+             rotation=90,
+             fontsize=15)
+    fig.suptitle("GLM Weights: " + title, y=0.99, fontsize=14)
+
+    fig.savefig(figure_directory / ('glm_FA_vs_abort_' + save_title + '.png'))
     plt.axis('off')
     plt.close(fig)

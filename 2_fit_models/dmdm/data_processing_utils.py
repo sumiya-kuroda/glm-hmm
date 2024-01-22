@@ -7,9 +7,10 @@ import numpy as np
 import pandas as pd
 import ssm
 
-sys.path.insert(0, './1_fit_glm/')
-from GLM import glm
+from data_io import load_glmhmm_data, load_cv_arr, load_glm_vectors, load_lapse_params, get_file_dir
 
+sys.path.append(str(get_file_dir() / '1_fit_glm'))
+from GLM import glm
 
 
 def partition_data_by_session(inpt, y, mask, session):

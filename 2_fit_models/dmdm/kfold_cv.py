@@ -4,7 +4,7 @@ import json
 import numpy as np
 from pathlib import Path
 from tqdm import tqdm
-from io import get_file_dir, load_session_fold_lookup, load_data, load_animal_list
+from data_io import get_file_dir, load_session_fold_lookup, load_data, load_animal_list
 from data_processing_utils import prepare_data_for_cv, calculate_baseline_test_ll, \
     calculate_glm_test_loglikelihood, calculate_cv_bit_trial, \
     return_glmhmm_nll, return_lapse_nll

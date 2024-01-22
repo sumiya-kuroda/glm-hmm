@@ -46,7 +46,11 @@ Launch Jupyter as
 export XDG_RUNTIME_DIR="" # See https://swc-neuro.slack.com/archives/CHLGTQVLL/p1560422985006700
 jupyter lab --port=2025
 ```
-Following [this procedure](https://github.com/pierreglaser/jupyter-slurm-setup-instructions) will make you able to connect to the Jupter notebook on HPC with [`http://127.0.0.1:2025/lab`](http://127.0.0.1:2024/lab) using your web browser. I personally use VSCode, so I will simply run `ssh -q -N ${jupyter_host_name} -L 2025:localhost:2025` from another HPC terminal to port forwarding ([ref](https://swc-neuro.slack.com/archives/C0116D5V7SA/p1645618426952349)). I then follow [this step](https://github.com/microsoft/vscode-jupyter/discussions/13145) and simply copy and paste the jupyter URL within HPC. We will use Jupyter when we run GLMs on preprocessed data. The first prerpocessing step does not require Jupyter, and you can simply run on a decent computing node.
+Following [this procedure](https://github.com/pierreglaser/jupyter-slurm-setup-instructions) will make you able to connect to the Jupter notebook on HPC with [`http://127.0.0.1:2025/lab`](http://127.0.0.1:2024/lab) using your web browser. I personally use VSCode, so I will simply run this command below from another HPC terminal to port forwarding ([ref](https://swc-neuro.slack.com/archives/C0116D5V7SA/p1645618426952349)).
+```sh
+ssh -q -N ${jupyter_host_name} -L 2025:localhost:2025
+``` 
+I then follow [this step](https://github.com/microsoft/vscode-jupyter/discussions/13145) and simply copy and paste the jupyter URL within HPC. We will use Jupyter when we run GLMs on preprocessed data. The first prerpocessing step does not require Jupyter, and you can simply run on a decent computing node.
 
 ## Run GLM-HMM
 Code is ordered so that the dataset is preprocessed into the desired format and fitting parameters are efficiently initialized. 
@@ -66,7 +70,7 @@ Finally GLM-HMMs can be fit to the data from individual animals using the code i
 It is completely optional to fit the lapse model to the dataset. While not used for any initialization purposes, this allows model comparison with the global and individual GLM-HMMs. 
           
 ### 3_make_figures
-Assuming that you have downloaded and preprocessed the datasets, and that you have fit all models on these datasets,  you can reproduce the figures of our paper corresponding to the IBL dataset by running the code contained in "3_make_figures".  In order to produce Figures 5 and 7, replace the IBL URL in the preprocessing pipeline scripts, with the URLs for the [Odoemene et al. (2018)](https://doi.org/10.14224/1.38944) and [Urai et al. (2017)](https://doi.org/10.6084/m9.figshare.4300043) datasets, and rerun the GLM, lapse and GLM-HMM models on these datasets before running the provided figure plotting code.
+This creates `figures` folder. Assuming that you have downloaded and preprocessed the datasets, and that you have fit all models on these datasets,  you can start some exploratory analysis and reproduce some figures. 
 
 
 ## Troubleshooting

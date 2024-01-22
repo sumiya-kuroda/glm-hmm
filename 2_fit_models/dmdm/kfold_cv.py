@@ -4,8 +4,8 @@ import json
 import numpy as np
 from pathlib import Path
 from tqdm import tqdm
-from post_processing_utils import load_data, load_session_fold_lookup, \
-    prepare_data_for_cv, calculate_baseline_test_ll, \
+from io import get_file_dir, load_session_fold_lookup, load_data, load_animal_list
+from data_processing_utils import prepare_data_for_cv, calculate_baseline_test_ll, \
     calculate_glm_test_loglikelihood, calculate_cv_bit_trial, \
     return_glmhmm_nll, return_lapse_nll
 
@@ -15,7 +15,7 @@ def get_best_iter(model: str,
                   data_dir: Path,
                   results_dir: Path,
                   outcome_dict=None,
-                  K_max=None):
+                  K_vals: list =None):
 
     # Load data
     inpt, y, session, _, _ = load_data(data_dir / 'all_animals_concat.npz')
@@ -28,7 +28,7 @@ def get_best_iter(model: str,
     if model == "GLM" or model == "Lapse_Model":
         num_models = 1
     elif model == "GLM_HMM":
-        num_models = K_max # maximum number of latent states
+        num_models = len(K_vals) # maximum number of latent states
         D = 1  # number of output dimensions
     cvbt_folds_model = np.zeros((num_models, num_folds))
     cvbt_train_folds_model = np.zeros((num_models, num_folds))
@@ -67,8 +67,6 @@ def get_best_iter(model: str,
             cvbt_train_folds_model[0, fold] = calculate_cv_bit_trial(
                 ll_glm_train, ll0_train, n_train)
 
-
-
         elif model == "Lapse_Model":
             # One lapse parameter model:
             cvbt_folds_model[1, fold], cvbt_train_folds_model[
@@ -84,9 +82,8 @@ def get_best_iter(model: str,
                                                 fold, 2, results_dir, C)
             
         elif model == "GLM_HMM":
-            for K in range(2, K_max + 1):
+            for model_idx, K in enumerate(K_vals):
                 print("K = " + str(K))
-                model_idx = 3 + (K - 2)
                 cvbt_folds_model[model_idx, fold], \
                 cvbt_train_folds_model[
                     model_idx, fold], _, _, init_ordering_by_train = \
@@ -95,15 +92,12 @@ def get_best_iter(model: str,
                         session, session_fold_lookup_table, fold,
                         K, D, C, results_dir)
                 # Save best initialization to dictionary for later:
-                key_for_dict = '/GLM_HMM_K_' + str(K) + '/fold_' + str(
-                    fold)
-                best_init_cvbt_dict[key_for_dict] = int(
-                    init_ordering_by_train[0])
+                key_for_dict = '/GLM_HMM_K_' + str(K) + '/fold_' + str(fold)
+                best_init_cvbt_dict[key_for_dict] = int(init_ordering_by_train[0])
         else:
             raise NotImplementedError
         
     # Save best initialization directories across animals, folds and models
-    # (only GLM-HMM):
     print(cvbt_folds_model)
     print(cvbt_train_folds_model)
     json_dump = json.dumps(best_init_cvbt_dict)

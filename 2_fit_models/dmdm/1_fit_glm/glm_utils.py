@@ -7,26 +7,6 @@ from pathlib import Path
 
 npr.seed(65)
 
-def get_file_dir():
-    return Path(os.path.dirname(os.path.realpath(__file__)))
-
-def load_data(animal_file):
-    container = np.load(animal_file, allow_pickle=True)
-    data = [container[key] for key in container]
-    inpt = data[0]
-    y = data[1]
-    session = data[2]
-    rt = data[3]
-    stimT = data[4]
-    return inpt, y, session, rt, stimT
-
-def load_session_fold_lookup(file_path):
-    container = np.load(file_path, allow_pickle=True)
-    data = [container[key] for key in container]
-    session_fold_lookup_table = data[0]
-    return session_fold_lookup_table
-
-
 def fit_glm_runml(inputs, datas, M, C, outcome_dict):
     new_glm = glm(M, C, outcome_dict, dist='RUNML')
     new_glm.fit_glm(datas, inputs, masks=None, tags=None)
@@ -43,13 +23,6 @@ def fit_glm(inputs, datas, M, C, outcome_dict):
     loglikelihood_train = new_glm.log_marginal(datas, inputs, None, None)
     recovered_weights = new_glm.Wk
     return loglikelihood_train, recovered_weights
-
-
-def load_animal_list(list_file):
-    container = np.load(list_file, allow_pickle=True)
-    data = [container[key] for key in container]
-    animal_list = data[0]
-    return animal_list
 
 # https://stackoverflow.com/questions/44465242/getting-the-legend-label-for-a-line-in-matplotlib
 def get_label_for_line(line):

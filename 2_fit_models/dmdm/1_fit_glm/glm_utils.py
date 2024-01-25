@@ -8,7 +8,7 @@ from pathlib import Path
 npr.seed(65)
 
 def fit_glm_runml(inputs, datas, M, C, outcome_dict):
-    new_glm = glm(M, C, outcome_dict, dist='RUNML')
+    new_glm = glm(M, C, outcome_dict, obs='RUNML')
     new_glm.fit_glm(datas, inputs, masks=None, tags=None)
     # Get loglikelihood of training data:
     loglikelihood_train = new_glm.log_marginal(datas, inputs, None, None)
@@ -16,13 +16,24 @@ def fit_glm_runml(inputs, datas, M, C, outcome_dict):
     return loglikelihood_train, recovered_weights
 
 def fit_glm(inputs, datas, M, C, outcome_dict):
-    new_glm = glm(M, C, outcome_dict, dist='Categorical')
+    new_glm = glm(M, C, outcome_dict, obs='Categorical')
     # new_glm = glm(M, C, outcome_dict, tau=[1,1], dist='RUNML')
     new_glm.fit_glm(datas, inputs, masks=None, tags=None)
     # Get loglikelihood of training data:
     loglikelihood_train = new_glm.log_marginal(datas, inputs, None, None)
     recovered_weights = new_glm.Wk
     return loglikelihood_train, recovered_weights
+
+# https://www.reddit.com/r/learnmath/comments/kw7bc6/can_someone_explain_what_a_diagonal_gaussian_is/
+def fit_RT_glm(inputs, datas, M):
+    new_glm = glm(M, 0, None, obs='DiagonalGaussian')
+    new_glm.fit_glm(datas, inputs, masks=None, tags=None, optimizer="adam")
+    # Get loglikelihood of training data:
+    loglikelihood_train = new_glm.log_marginal(datas, inputs, None, None)
+    print(loglikelihood_train)
+    recovered_mus = new_glm.mus
+    recovered__log_sigmasq = new_glm._log_sigmasq
+    return loglikelihood_train, recovered_mus, recovered__log_sigmasq
 
 # https://stackoverflow.com/questions/44465242/getting-the-legend-label-for-a-line-in-matplotlib
 def get_label_for_line(line):

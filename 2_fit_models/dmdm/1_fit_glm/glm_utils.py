@@ -25,15 +25,14 @@ def fit_glm(inputs, datas, M, C, outcome_dict):
     return loglikelihood_train, recovered_weights
 
 # https://www.reddit.com/r/learnmath/comments/kw7bc6/can_someone_explain_what_a_diagonal_gaussian_is/
-def fit_RT_glm(inputs, datas, M):
+def fit_RT_glm(inputs, datas, stim_onset, M):
     new_glm = glm(M, 0, None, obs='DiagonalGaussian')
-    new_glm.fit_glm(datas, inputs, masks=None, tags=None, optimizer="adam")
+    new_glm.fit_glm(datas, inputs, masks=None, tags=stim_onset, 
+                    optimizer="adam")
     # Get loglikelihood of training data:
-    loglikelihood_train = new_glm.log_marginal(datas, inputs, None, None)
-    print(loglikelihood_train)
-    recovered_mus = new_glm.mus
-    recovered__log_sigmasq = new_glm._log_sigmasq
-    return loglikelihood_train, recovered_mus, recovered__log_sigmasq
+    loglikelihood_train = new_glm.log_marginal(datas, inputs, None, stim_onset)
+    recovered_weights = new_glm.Wk
+    return loglikelihood_train, recovered_weights
 
 # https://stackoverflow.com/questions/44465242/getting-the-legend-label-for-a-line-in-matplotlib
 def get_label_for_line(line):
@@ -189,5 +188,49 @@ def plot_logOR_FA_vs_abort(Ws,
     fig.suptitle("GLM Weights: " + title, y=0.99, fontsize=14)
 
     fig.savefig(figure_directory / ('glm_FA_vs_abort_' + save_title + '.png'))
+    plt.axis('off')
+    plt.close(fig)
+
+
+def plot_rt_weights(Ws,
+                       figure_directory,
+                       title='true',
+                       save_title="true",
+                       labels_for_plot=[]):
+    K = Ws.shape[0]
+    M = Ws.shape[1] - 1 # exclude bias just for clarification purpose
+
+
+    fig = plt.figure(figsize=(7, 9), dpi=80, facecolor='w', edgecolor='k')
+    plt.subplots_adjust(left=0.15,
+                        bottom=0.27,
+                        right=0.95,
+                        top=0.95,
+                        wspace=0.3,
+                        hspace=0.3)
+
+    for j in range(K):
+        l = plt.plot(range(M + 1), 
+                        Ws[j], # plot weights with orginal signs
+                        marker='o')
+        plt.ylim((-10, 10))
+        plt.xlim(-1, M+1)
+        
+        plt.axhline(y=0, color="k", alpha=0.5, ls="--")
+        plt.xticks(list(range(0, len(labels_for_plot))),
+                    labels_for_plot,
+                    rotation='90',
+                    fontsize=12)
+        plt.legend()
+    fig.text(0.04,
+             0.5,
+             "Weight",
+             ha="center",
+             va="center",
+             rotation=90,
+             fontsize=15)
+    fig.suptitle("RT GLM Weights: " + title, y=0.99, fontsize=14)
+
+    fig.savefig(figure_directory / ('RT-glm_weights_' + save_title + '.png'))
     plt.axis('off')
     plt.close(fig)

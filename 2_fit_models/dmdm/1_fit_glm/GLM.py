@@ -18,13 +18,18 @@ class glm(object):
         self.M = M
         self.C = C
         self.outcome_dict = outcome_dict
-
-        # Parameters linking input to state distribution
-        self.Wk = npr.randn(1, C, M + 1)
         self.taus = taus
         self.obs = obs
-        self.mus = npr.randn(1, 1)
-        self._log_sigmasq = -2 + npr.randn(1, 1)
+
+        # Parameters linking input to state distribution
+        if (self.obs == 'Categorical') or (self.obs == 'RUNML'):
+            self.Wk = npr.randn(1, C, M + 1)
+        elif self.obs == 'DiagonalGaussian':
+            self.Wk = npr.randn(1, M + 1)
+            self.mus = npr.randn(1, 1)
+            self._log_sigmasq = -2 + npr.randn(1, 1)
+        else:
+            raise NotImplementedError
 
     @property
     def weights(self):
@@ -37,33 +42,11 @@ class glm(object):
     def log_prior(self):
         return 0
 
-    @property
-    def sigmasq(self):
-        return np.exp(self._log_sigmasq)
-
-    @sigmasq.setter
-    def sigmasq(self, value):
-        assert np.all(value > 0) and value.shape == (1, 1)
-        self._log_sigmasq = np.log(value)
-
-    @property
-    def mulogsimasq(self):
-        return self.mus, self._log_sigmasq
-
-    @mulogsimasq.setter
-    def mulogsimasq(self, value):
-        self.mus, self._log_sigmasq = value
-
-    def permute(self, perm):
-        self.mus = self.mus[perm]
-        self._log_sigmasq = self._log_sigmasq[perm]
-
     # Calculate time dependent logits - output is matrix of size Tx1xC
     # Input is size TxM
     def calculate_logits(self, input):
         # Update input to include offset term at the end:
         input = np.append(input, np.ones((input.shape[0], 1)), axis=1)
-
         # Input effect; transpose so that output has dims TxKxC
         time_dependent_logits = np.transpose(np.dot(self.Wk, input.T), (2, 0, 1))
         if self.obs == 'Categorical':
@@ -79,19 +62,25 @@ class glm(object):
         
         return time_dependent_logits
 
-    def calculate_identities(self, input):
+    # Calculate time dependent identities - output is mu and sigma for N(mu, sigma)
+    # Input is size TxM as well as Tag, which is a 1xM vector of change onset.
+    def calculate_identities(self, input, tag):
         # Update input to include offset term at the end:
         input = np.append(input, np.ones((input.shape[0], 1)), axis=1)
+        # Input effect; transpose so that output has dims Tx1
+        time_dependent_identity = np.transpose(np.dot(self.Wk, input.T), (1, 0))
 
-        # Input effect; transpose so that output has dims TxKxC
-        time_dependent_logits = np.transpose(np.dot(self.Wk, input.T), (2, 0, 1))
+        # time_dependent_identity = np.add(time_dependent_identity, tag) # wX + COnset
+
         if self.obs == 'DiagonalGaussian':
-            time_dependent_logits = time_dependent_logits - logsumexp(
-                time_dependent_logits, axis=2, keepdims=True)
+            mus = np.mean(time_dependent_identity, axis=0) # use np.average
+            sqerr = (time_dependent_identity - mus) ** 2
+            log_sigmasq = np.log(np.mean(sqerr, axis=0)) # use np.average
+            sigmas = np.exp(log_sigmasq) + 1e-16
         else:
             raise NotImplementedError
         
-        return time_dependent_logits
+        return mus, sigmas
 
     # Calculate log-likelihood of observed data
     def log_likelihoods(self, data, input, mask, tag):
@@ -107,9 +96,7 @@ class glm(object):
                                            time_dependent_logits[:, :, None, :],
                                            mask=mask[:, None, :])
         elif self.obs == 'DiagonalGaussian':
-             mus, sigmas = self.mus, np.exp(self._log_sigmasq) + 1e-16
-             print(mus)
-             print(sigmas)
+             mus, sigmas = self.calculate_identities(input, tag)
              ll = stats.diagonal_gaussian_logpdf(data[:, None, :], mus, sigmas,
                                                  mask=mask[:, None, :])
         else: 
@@ -141,18 +128,13 @@ class glm(object):
         optimizer = dict(adam=adam, bfgs=bfgs, rmsprop=rmsprop,
                          sgd=sgd, lbfgs=lbfgs)[optimizer]
 
-        def _objective_logistic(weights, itr):
+        def _objective(weights, itr):
             self.weights = weights
             obj = self.log_marginal(datas, inputs, masks, tags)
             return -obj
 
-        def _objective_gaussian(sigmasq, itr):
-            self.sigmasq = sigmasq
-            obj = self.log_marginal(datas, inputs, masks, tags)
-            return -obj
-
         if (self.obs == 'Categorical') or (self.obs == 'RUNML'):
-            Wk_1d = optimizer(_objective_logistic, 
+            Wk_1d = optimizer(_objective, 
                               self.weights,
                               num_iters=num_iters,
                               tol=tol,
@@ -161,8 +143,8 @@ class glm(object):
             self.weights = np.reshape(Wk_1d, (self.C, -1))[None,:,:]
 
         elif self.obs == 'DiagonalGaussian':
-             self.sigmasq = optimizer(_objective_gaussian, 
-                                      self.sigmasq,
+             self.weights = optimizer(_objective, 
+                                      self.weights,
                                       num_iters=num_iters,
                                       **kwargs)
         else:

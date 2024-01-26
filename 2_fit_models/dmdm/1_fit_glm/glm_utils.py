@@ -221,7 +221,6 @@ def plot_rt_weights(Ws,
                     labels_for_plot,
                     rotation='90',
                     fontsize=12)
-        plt.legend()
     fig.text(0.04,
              0.5,
              "Weight",

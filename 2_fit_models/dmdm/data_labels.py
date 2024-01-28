@@ -31,7 +31,7 @@ def partition_data_by_session(inpt, y, mask, session):
     assert counter == inpt.shape[0], "not all trials assigned to session!"
     return inputs, datas, masks
 
-def create_violation_mask(violation_idx, T):
+def create_abort_mask(abort_idx, T: int):
     """
     Return indices of nonviolations and also a Boolean mask for inclusion (1
     = nonviolation; 0 = violation)
@@ -39,11 +39,11 @@ def create_violation_mask(violation_idx, T):
     :param T:
     :return:
     """
-    mask = np.array([i not in violation_idx for i in range(T)])
+    mask = np.array([i not in abort_idx for i in range(T)])
     nonviolation_idx = np.arange(T)[mask]
-    mask = mask + 0
+    mask = np.expand_dims(mask + 0, axis=1)
     assert len(nonviolation_idx) + len(
-        violation_idx) == T, "violation and non-violation idx do not include " \
+        abort_idx) == T, "violation and non-violation idx do not include " \
                              "" \
                              "" \
                              "" \

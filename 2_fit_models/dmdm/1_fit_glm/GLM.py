@@ -6,6 +6,7 @@ from autograd.scipy.special import logsumexp
 from ssm.util import ensure_args_are_lists
 from ssm.optimizers import adam, bfgs, rmsprop, sgd, lbfgs
 import ssm.stats as stats
+from ssm.util import one_hot
 # Import functions to run RUMNL
 from RUMNL import calculate_NestedMultinominalLogit, nested_categorical_logpdf, calculate_tau
 npr.seed(65)  # set seed in case of randomization
@@ -149,11 +150,3 @@ class glm(object):
                                       **kwargs)
         else:
             raise NotImplementedError
-
-
-
-
-
-
-
-

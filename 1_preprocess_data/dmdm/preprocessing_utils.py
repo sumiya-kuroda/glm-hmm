@@ -35,7 +35,7 @@ def get_all_unnormalized_data_this_session(eid, path_to_dataset):
     animal, session_id, changesize, hazardblock, outcome, reactiontimes, stimT \
         = get_raw_data(eid, path_to_dataset)
 
-    # Subset early blocks only:
+    # Use sessions that have both early and late blocks
     trials_to_study = np.where((hazardblock == 0) | (hazardblock == 1))[0]
 
     # Create design mat = matrix of size T x 6, with entries for

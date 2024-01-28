@@ -128,6 +128,8 @@ def remap_vals(choice, stim, stimT, rt, delay=0.5, miss_onset_delay = 2.15):
     for i, loc in enumerate(locs_FA_abort):
         stim_updated[loc] = 0 
         stimT_updated[loc] = rt[loc] - delay
+        if stimT_updated[loc] <0:
+            stimT_updated[loc] = 0
 
     # Make a change onset of miss trials to be a full length of that trial
     locs_miss = np.where(choice_updated == 0)[0]

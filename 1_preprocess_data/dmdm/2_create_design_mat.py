@@ -134,12 +134,20 @@ def main(dname, *, req_num_sessions = 30, num_folds=5):
         processed_dmdm_data_path / 'all_animals_concat.npz',
         normalized_y_inpt, normalized_rt_inpt, master_y, 
         master_session, master_rt, master_stim_onset)
+    np.save(
+        processed_dmdm_data_path / 'test_normalized_y_inpt.npy',
+        normalized_y_inpt)
+    np.save(
+        processed_dmdm_data_path / 'test_master_y.npy',
+        master_y)
+    np.savetxt(processed_dmdm_data_path / 'test_master_session.csv', master_session, delimiter=',',fmt="%s")
     np.savez(
         processed_dmdm_data_path / 'all_animals_concat_unnormalized.npz',
         master_y_inpt, master_y, master_session, master_rt, master_stim_onset)
     np.savez(
         processed_dmdm_data_path / 'all_animals_concat_session_fold_lookup.npz',
         master_session_fold_lookup_table)
+    np.savetxt(processed_dmdm_data_path / 'all_animals_concat_session_fold_lookup.csv',master_session_fold_lookup_table, delimiter=',',fmt="%s")
     np.savez(
         processed_dmdm_data_path / 'data_by_animal/' / 'animal_list.npz',
         animal_list)

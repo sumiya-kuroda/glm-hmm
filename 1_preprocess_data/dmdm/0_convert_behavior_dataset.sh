@@ -10,7 +10,7 @@ Convert behavior data
 where:
     -h  show this help text
     -i  input
-    -f  which dmdm project format
+    -f  which dmdm project format: Choose from Lohse or Kuroda
 "
 
 BASE="$( cd "$( dirname "$BASH_SOURCE" )" && pwd -P )"
@@ -24,12 +24,20 @@ while getopts ':hi:f:' opt; do
 done
 
 # mandatory arguments 
-# [ ! "$INPUT" ] || [ ! "$FORMAT" ]
-if [ ! "$INPUT" ]; then
+if [ ! "$INPUT" ] || [ ! "$FORMAT" ]; then
   echo "Error: arguments -i and -f must be provided"; return;
 fi
 
-matlab -nodisplay -nosplash -nodesktop -r "cd('$BASE'); \
-                                           addpath(genpath('.')); \
-                                           convert_BehLohse('$INPUT'); \
-                                           exit"
+if [ "$FORMAT" = "Lohse" ]; then
+  matlab -nodisplay -nosplash -nodesktop -r "cd('$BASE'); \
+                                            addpath(genpath('.')); \
+                                            convert_BehLohse('$INPUT'); \
+                                            exit"
+elif [ "$FORMAT" = "Kuroda" ]; then
+  matlab -nodisplay -nosplash -nodesktop -r "cd('$BASE'); \
+                                            addpath(genpath('.')); \
+                                            convert_BehKuroda('$INPUT'); \
+                                            exit"
+else
+  echo "Error: Format $FORMAT not supported"; return;
+fi

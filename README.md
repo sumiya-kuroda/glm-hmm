@@ -58,7 +58,7 @@ Code is ordered so that the dataset is preprocessed into the desired format and 
 ### 1_preprocess_data 
 This creates `data` folder. Within this directory, run the scripts in the order indicated by the number at the beginning of the file name. For dmdm dataset, run `0_convert_behavior_dataset.sh` first. This script converts raw behavior data saved in `.mat` to Ashwood's GLM-HMM-friendly `.npy` format. You also need to be cautious that, even for the dmdm dataset, animals' behaviors are stored slightly different between projects. This shell scirpt therefore requires both a path to `.mat` file as well as which format the `.mat` file uses. Example usage:
 ```
-. ./0_convert_behavior_dataset.sh -i ${path_to_raw_data}
+. ./0_convert_behavior_dataset.sh -i ${path_to_raw_data} -f ${file_format}
 ```
 
 Then run `1_begin_processing.py` and `2_create_design_mat.py` to obtain the design matrix used as input for all of the models. If you want to reproduce Ashwood's results on IBL dataset, follow the steps on her repo. If you want to customize the design matrix for GLMs, edit `design_mat_utils.py`. Example usage:

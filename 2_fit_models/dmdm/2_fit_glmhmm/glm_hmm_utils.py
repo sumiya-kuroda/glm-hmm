@@ -2,24 +2,11 @@
 import sys
 import ssm
 import autograd.numpy as np
-import autograd.numpy.random as npr
-from pathlib import Path
-import os
 import seaborn as sns
 import matplotlib.pyplot as plt
 
 sys.path.append('../') 
-from data_labels import create_cv_frame_for_plotting
-
-npr.seed(65)
-
-
-def load_global_params(global_params_file):
-    container = np.load(global_params_file, allow_pickle=True)
-    data = [container[key] for key in container]
-    global_params = data[0]
-    return global_params
-
+from kfold_cv import create_cv_frame_for_plotting
 
 def fit_glm_hmm(datas, inputs, masks, K, D, M, C, N_em_iters,
                 transition_alpha, prior_sigma, global_fit,

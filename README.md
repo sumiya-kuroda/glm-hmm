@@ -65,7 +65,6 @@ Then run `1_begin_processing.py` and `2_create_design_mat.py` to obtain the desi
 ```
 python 1_begin_processing.py ${filename}
 python 2_create_design_mat.py ${filename} -r ${min_number_of_sessions}
-
 ```
 
 ### 2_fit_models

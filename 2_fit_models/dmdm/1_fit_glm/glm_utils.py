@@ -2,38 +2,43 @@ import autograd.numpy as np
 import autograd.numpy.random as npr
 import matplotlib.pyplot as plt
 from GLM import glm
-import os
 from pathlib import Path
 
-npr.seed(65)
-
 def fit_glm_runml(inputs, datas, M, C, masks, outcome_dict):
+    # Initialize GLM and fit:
     new_glm = glm(M, C, outcome_dict, obs='RUNML')
-    fit_ll = new_glm.fit_glm(datas, inputs, masks=masks, tags=None)
-    # Get loglikelihood of training data:
+    weights_progress = new_glm.fit_glm(datas, inputs, masks=masks, tags=None)
+    lls_progress = new_glm.recover_lls(datas, inputs, masks, [None], weights_progress)
+    # Get final lloglikelihood of training data:
     loglikelihood_train = new_glm.log_marginal(datas, inputs, None, None)
+    # Get final weights of training data:
     recovered_weights = new_glm.Wk
-    return loglikelihood_train, recovered_weights, fit_ll
+    return loglikelihood_train, recovered_weights, lls_progress
 
-def fit_glm(inputs, datas, M, C, masks, outcome_dict):
+def fit_glm(inputs, datas, M, C, masks=None, outcome_dict=None):
+    # Initialize GLM and fit:
     new_glm = glm(M, C, outcome_dict, obs='Categorical')
-    # init_Wk = new_glm.Wk
     # new_glm = glm(M, C, outcome_dict, tau=[1,1], dist='RUNML')
-    fit_ll = new_glm.fit_glm(datas, inputs, masks=masks, tags=None) # -1 * 
-    # Get loglikelihood of training data:
-    loglikelihood_train = new_glm.log_marginal(datas, inputs, None, None)
+    weights_progress = new_glm.fit_glm(datas, inputs, masks=masks, tags=None) 
+    lls_progress = new_glm.recover_lls(datas, inputs, masks, [None], weights_progress)
+    # Get final loglikelihood of training data:
+    loglikelihood_train = new_glm.log_marginal(datas, inputs, masks, None)
+    # Get final weights of training data:
     recovered_weights = new_glm.Wk
-    return loglikelihood_train, recovered_weights, fit_ll
+    return loglikelihood_train, recovered_weights, lls_progress
 
 # https://www.reddit.com/r/learnmath/comments/kw7bc6/can_someone_explain_what_a_diagonal_gaussian_is/
-def fit_RT_glm(inputs, datas, stim_onset, M, masks):
+def fit_RT_glm(inputs, datas, stim_onset, M, masks=None):
+    # Initialize GLM and fit:
     new_glm = glm(M, 0, None, obs='DiagonalGaussian')
-    new_glm.fit_glm(datas, inputs, masks=masks, tags=stim_onset, 
-                    optimizer="adam")
-    # Get loglikelihood of training data:
-    loglikelihood_train = new_glm.log_marginal(datas, inputs, None, stim_onset)
+    weights_progress = new_glm.fit_glm(datas, inputs, masks=masks, tags=stim_onset, 
+                             optimizer="adam")
+    lls_progress = new_glm.recover_lls(datas, inputs, masks, [None], weights_progress)
+    # Get final lloglikelihood of training data:
+    loglikelihood_train = new_glm.log_marginal(datas, inputs, masks, stim_onset)
+    # Get final weights of training data:
     recovered_weights = new_glm.Wk
-    return loglikelihood_train, recovered_weights
+    return loglikelihood_train, recovered_weights, lls_progress
 
 # https://stackoverflow.com/questions/44465242/getting-the-legend-label-for-a-line-in-matplotlib
 def get_label_for_line(line):
@@ -50,7 +55,6 @@ def plot_input_vectors(Ws,
     K_prime = Ws.shape[1] # C
     M = Ws.shape[2] - 1 # exclude bias just for clarification purpose
 
-    # hit = 1, FA = 2, miss = 0, abort = 3
     choice_label_mapping = {0: 'miss', 1: 'Hit', 2: 'FA', 3: 'abort'}
 
     fig = plt.figure(figsize=(7, 9), dpi=80, facecolor='w', edgecolor='k')
@@ -80,14 +84,14 @@ def plot_input_vectors(Ws,
         plt.legend()
     fig.text(0.04,
              0.5,
-             "Weight",
+             "y Weight",
              ha="center",
              va="center",
              rotation=90,
              fontsize=15)
     fig.suptitle("GLM Weights: " + title, y=0.99, fontsize=14)
 
-    fig.savefig(figure_directory / ('glm_weights_' + save_title + '.png'))
+    fig.savefig(figure_directory / ('y_glm_weights_' + save_title + '.png'))
     plt.axis('off')
     plt.close(fig)
 
@@ -131,7 +135,7 @@ def plot_logOR_hit_vs_miss(Ws,
                     fontsize=12)
     fig.text(0.04,
              0.5,
-             "Weight",
+             "y Weight",
              ha="center",
              va="center",
              rotation=90,
@@ -181,7 +185,7 @@ def plot_logOR_FA_vs_abort(Ws,
                     fontsize=12)
     fig.text(0.04,
              0.5,
-             "Weight",
+             "y Weight",
              ha="center",
              va="center",
              rotation=90,
@@ -224,38 +228,30 @@ def plot_rt_weights(Ws,
                     fontsize=12)
     fig.text(0.04,
              0.5,
-             "Weight",
+             "RT Weight",
              ha="center",
              va="center",
              rotation=90,
              fontsize=15)
     fig.suptitle("RT GLM Weights: " + title, y=0.99, fontsize=14)
 
-    fig.savefig(figure_directory / ('RT-glm_weights_' + save_title + '.png'))
+    fig.savefig(figure_directory / ('RT_glm_weights_' + save_title + '.png'))
     plt.axis('off')
     plt.close(fig)
 
 
 def plot_lls(fit_ll,
-                       figure_directory,
-                       title='true',
-                       save_title="true"):
-
-    K = Ws.shape[0]
-    K_prime = Ws.shape[1] # C
-    M = Ws.shape[2] - 1 # exclude bias just for clarification purpose
-
-    # hit = 1, FA = 2, miss = 0, abort = 3
-    choice_label_mapping = {0: 'miss', 1: 'Hit', 2: 'FA', 3: 'abort'}
+             figure_directory,
+             save_title="true"):
 
     fig = plt.figure(figsize=(4, 3), dpi=80, facecolor='w', edgecolor='k')
     plt.plot(fit_ll, label="EM")
-    plt.plot([0, len(fit_ll)], true_ll * np.ones(2), ':k', label="True")
     plt.legend(loc="lower right")
-    plt.xlabel("EM Iteration")
+    plt.xlabel("Iteration")
     plt.xlim(0, len(fit_ll))
     plt.ylabel("Log Probability")
 
     fig.savefig(figure_directory / ('glm_lls_' + save_title + '.png'))
     plt.axis('off')
     plt.close(fig)
+

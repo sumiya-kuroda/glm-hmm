@@ -35,7 +35,7 @@ def fit_RT_glm(inputs, datas, stim_onset, M, masks=None):
     new_glm = glm(M, 0, None, obs='DiagonalGaussian')
     weights_progress = new_glm.fit_glm(datas, inputs, masks=masks, tags=stim_onset, 
                                        optimizer="rmsprop")
-    lls_progress = new_glm.recover_lls(datas, inputs, masks, [None], weights_progress)
+    lls_progress = weights_progress
 
     # Get final lloglikelihood of training data:
     loglikelihood_train = new_glm.log_marginal(datas, inputs, masks, stim_onset)

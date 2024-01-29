@@ -164,7 +164,7 @@ class glm(object):
             self.weights = np.reshape(Wk_1d, (self.C, -1))[None,:,:]
 
             out = [np.reshape(o, (self.C, -1))[None,:,:] for o in out_1d['allvecs']]
-            return out
+            return out # output is list of weights
 
         elif self.obs == 'DiagonalGaussian':
              self.weights, _, out_1d = optimizer(_objective, 
@@ -172,7 +172,7 @@ class glm(object):
                                                  num_iters=num_iters,
                                                  full_output=True,
                                                  **kwargs)
-             out = [o[None,:] for o in out_1d]
-             return out
+             # out = [o[None,:] for o in out_1d]
+             return -1 * out_1d[0] # output is list of lls
         else:
             raise NotImplementedError

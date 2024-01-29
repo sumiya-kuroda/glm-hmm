@@ -143,7 +143,7 @@ class glm(object):
                 tags,
                 num_iters=10000,
                 optimizer="bfgs", # or lbfgs
-                tol=1e-2,
+                tol=1e-4,
                 **kwargs):
         optimizer = dict(adam=adam, bfgs=bfgs, rmsprop=rmsprop,
                          sgd=sgd, lbfgs=lbfgs)[optimizer]
@@ -167,11 +167,11 @@ class glm(object):
             return out
 
         elif self.obs == 'DiagonalGaussian':
-             self.weights, out_1d = optimizer(_objective, 
-                                              self.weights,
-                                              num_iters=num_iters,
-                                               full_output=True,
-                                               **kwargs)
+             self.weights, _, out_1d = optimizer(_objective, 
+                                                 self.weights,
+                                                 num_iters=num_iters,
+                                                 full_output=True,
+                                                 **kwargs)
              out = [o[None,:] for o in out_1d]
              return out
         else:

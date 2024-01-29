@@ -1,4 +1,3 @@
-#  Functions to assist with post-processing of GLM-HMM fits
 import numpy as np
 
 def partition_data_by_session(inpt, y, mask, session):
@@ -33,22 +32,16 @@ def partition_data_by_session(inpt, y, mask, session):
 
 def create_abort_mask(abort_idx, T: int):
     """
-    Return indices of nonviolations and also a Boolean mask for inclusion (1
+    Return indices of nonviolations (non-abort) and also a Boolean mask for inclusion (1
     = nonviolation; 0 = violation)
-    :param test_idx:
-    :param T:
-    :return:
+    :param abort_idx np.array: indices of abort trials
+    :param T int: length of the data, i.e., the total number of trials
     """
     mask = np.array([i not in abort_idx for i in range(T)])
     nonviolation_idx = np.arange(T)[mask]
     mask = np.expand_dims(mask + 0, axis=1)
-    assert len(nonviolation_idx) + len(
-        abort_idx) == T, "violation and non-violation idx do not include " \
-                             "" \
-                             "" \
-                             "" \
-                             "" \
-                             "all dta!"
+    assert len(nonviolation_idx) + len(abort_idx) == T, \
+        "violation and non-violation idx do not include all data!"
     return nonviolation_idx, mask
 
 def create_cv_frame_for_plotting(cv_file):

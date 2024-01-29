@@ -7,8 +7,9 @@ from pathlib import Path
 def fit_glm_runml(inputs, datas, M, C, masks, outcome_dict):
     # Initialize GLM and fit:
     new_glm = glm(M, C, outcome_dict, obs='RUNML')
-    weights_progress = new_glm.fit_glm(datas, inputs, masks=masks, tags=None)
+    weights_progress = new_glm.fit_glm(datas, inputs, masks=masks, tags=None, tol=1e-2)
     lls_progress = new_glm.recover_lls(datas, inputs, masks, [None], weights_progress)
+
     # Get final lloglikelihood of training data:
     loglikelihood_train = new_glm.log_marginal(datas, inputs, None, None)
     # Get final weights of training data:
@@ -19,8 +20,9 @@ def fit_glm(inputs, datas, M, C, masks=None, outcome_dict=None):
     # Initialize GLM and fit:
     new_glm = glm(M, C, outcome_dict, obs='Categorical')
     # new_glm = glm(M, C, outcome_dict, tau=[1,1], dist='RUNML')
-    weights_progress = new_glm.fit_glm(datas, inputs, masks=masks, tags=None) 
+    weights_progress = new_glm.fit_glm(datas, inputs, masks=masks, tags=None, tol=1e-2) 
     lls_progress = new_glm.recover_lls(datas, inputs, masks, [None], weights_progress)
+
     # Get final loglikelihood of training data:
     loglikelihood_train = new_glm.log_marginal(datas, inputs, masks, None)
     # Get final weights of training data:
@@ -32,8 +34,9 @@ def fit_RT_glm(inputs, datas, stim_onset, M, masks=None):
     # Initialize GLM and fit:
     new_glm = glm(M, 0, None, obs='DiagonalGaussian')
     weights_progress = new_glm.fit_glm(datas, inputs, masks=masks, tags=stim_onset, 
-                             optimizer="adam")
+                                       optimizer="rmsprop")
     lls_progress = new_glm.recover_lls(datas, inputs, masks, [None], weights_progress)
+
     # Get final lloglikelihood of training data:
     loglikelihood_train = new_glm.log_marginal(datas, inputs, masks, stim_onset)
     # Get final weights of training data:

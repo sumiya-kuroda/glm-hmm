@@ -20,7 +20,7 @@ def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard):
                                                                 reactiontimes)
     
     # Change size:
-    design_mat = np.zeros((len(stim_updated), 6))
+    design_mat = np.zeros((len(stim_updated), 3))
     design_mat[:, 0] = stim_updated # unnormalized
 
     # Change onset:
@@ -33,8 +33,8 @@ def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard):
 
     # previous choice vector:
     previous_choice, rewarded = create_previous_choice_vector(choice_updated)
-    design_mat[:, 2:6] = previous_choice
-    # design_mat[:, 4] = rewarded
+    # design_mat[:, 2:6] = previous_choice
+    design_mat[:, 2] = rewarded
 
     # previous change onset and reactiontime:
     # previous_stimT, previous_rt = create_previous_RT_vector(stimT, reactiontimes, locs_FA_abort)
@@ -148,7 +148,7 @@ def create_previous_choice_vector(choice):
     one_hot_prev_choice = one_hot(previous_choice, 4)
 
     choice_mapping = {1: 1, 2: -1, 0: 0, 3: 0}
-    prev_rewarded = [choice_mapping[old_choice] for old_choice in choice]
+    prev_rewarded = [choice_mapping[old_choice] for old_choice in previous_choice]
 
     return one_hot_prev_choice, prev_rewarded
 

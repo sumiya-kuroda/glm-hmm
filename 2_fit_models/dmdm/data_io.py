@@ -1,23 +1,21 @@
 import autograd.numpy as np
-import autograd.numpy.random as npr
 import os
 from pathlib import Path
-
-npr.seed(65)
 
 def get_file_dir(): # dmdm dir
     return Path(os.path.dirname(os.path.realpath(__file__)))
 
-# Load data
+# Functions to load data
 def load_data(animal_file):
     container = np.load(animal_file, allow_pickle=True)
     data = [container[key] for key in container]
-    inpt = data[0]
-    y = data[1]
-    session = data[2]
-    rt = data[3]
-    stimT = data[4]
-    return inpt, y, session, rt, stimT
+    inpt_y = data[0]
+    inpt_rt = data[1]
+    y = data[2]
+    session = data[3]
+    rt = data[4]
+    stim_onset = data[5]
+    return inpt_y, inpt_rt, y, session, rt, stim_onset
 
 def load_session_fold_lookup(file_path):
     container = np.load(file_path, allow_pickle=True)
@@ -31,7 +29,7 @@ def load_animal_list(list_file):
     animal_list = data[0]
     return animal_list
 
-# Loat results
+# Function to load results
 def load_glm_vectors(glm_vectors_file):
     container = np.load(glm_vectors_file)
     data = [container[key] for key in container]

@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import numpy as np
-from sklearn import preprocessing
 import numpy.random as npr
+from sklearn import preprocessing
 import os
 import json
 from collections import defaultdict
@@ -15,11 +15,11 @@ npr.seed(65)
 
 def main(dname, *, req_num_sessions = 30, num_folds=5):
     """
-    Continue preprocessing of dmdm dataset and create design matrix for GLM-HMM
+    Continue preprocessing of dmdm dataset and create design matrix for GLM(-HMM)
     
     :param str dname: name of dataset needs to be preprocessed
     :param int req_num_sessions: Required number of sessions for each animal
-    :param int num_folds: Number of folds for cross-validation
+    :param int num_folds: Number of folds for k-fold cross-validation
     """
     dirname = Path(os.path.dirname(os.path.abspath(__file__)))
     dmdm_data_path =  dirname.parents[1] / "data" / "dmdm" / dname
@@ -35,7 +35,6 @@ def main(dname, *, req_num_sessions = 30, num_folds=5):
         dmdm_data_path / 'partially_processed' / 'animal_list.npz')
     animal_eid_dict = load_animal_eid_dict(
         dmdm_data_path / 'partially_processed' / 'animal_eid_dict.json')
-
 
     # Remove animals with few sessions
     for animal in animal_list:
@@ -54,30 +53,39 @@ def main(dname, *, req_num_sessions = 30, num_folds=5):
         sess_counter = 0
         for eid in animal_eid_dict[animal]:
 
-            animal, unnormalized_inpt, y, session, reactiontimes, stimT = \
-                get_all_unnormalized_data_this_session(
-                    eid, dmdm_data_path)
-            
+            animal, session, y, reactiontimes, stim_onset,\
+                unnormalized_inpts, needs_to_be_normalized = \
+                get_all_unnormalized_data_this_session(eid, dmdm_data_path)
+            assert len(unnormalized_inpts) == 2, "Require both y and rt design mat!"
+
+            unnormalized_inpt_y = unnormalized_inpts[0]
+            unnormalized_inpt_rt = unnormalized_inpts[1]
+
             if sess_counter == 0:
-                animal_unnormalized_inpt = np.copy(unnormalized_inpt)
+                animal_unnormalized_y_inpt = np.copy(unnormalized_inpt_y)
+                animal_unnormalized_rt_inpt = np.copy(unnormalized_inpt_rt)
                 animal_y = np.copy(y)
                 animal_session = session
                 animal_rt = np.copy(reactiontimes)
-                animal_stimT = np.copy(stimT)
+                animal_stim_onset = np.copy(stim_onset)
             else:
-                animal_unnormalized_inpt = np.vstack(
-                    (animal_unnormalized_inpt, unnormalized_inpt))
+                animal_unnormalized_y_inpt = np.vstack(
+                    (animal_unnormalized_y_inpt, unnormalized_inpt_y))
+                animal_unnormalized_rt_inpt = np.vstack(
+                    (animal_unnormalized_rt_inpt, unnormalized_inpt_rt))
                 animal_y = np.concatenate((animal_y, y))
                 animal_session = np.concatenate((animal_session, session))
                 animal_rt = np.concatenate((animal_rt, reactiontimes))
-                animal_stimT = np.concatenate((animal_stimT, stimT))
+                animal_stim_onset = np.concatenate((animal_stim_onset, stim_onset))
             sess_counter += 1
             final_animal_eid_dict[animal].append(eid)
 
         # Write out animal's unnormalized data matrix:
         np.savez(
             processed_dmdm_data_path / 'data_by_animal' / (animal + '_unnormalized.npz'),
-            animal_unnormalized_inpt, animal_y, animal_session, animal_rt, animal_stimT)
+            animal_unnormalized_y_inpt, animal_unnormalized_rt_inpt,
+            animal_y, animal_session, animal_rt, animal_stim_onset)
+        # Write out animal's train/test session:
         animal_session_fold_lookup = create_train_test_sessions(animal_session,
                                                                 num_folds)
         np.savez(
@@ -86,41 +94,49 @@ def main(dname, *, req_num_sessions = 30, num_folds=5):
         
         # Now create or append data to master array across all animals:
         if z == 0:
-            master_inpt = np.copy(animal_unnormalized_inpt)
+            master_y_inpt = np.copy(animal_unnormalized_y_inpt)
+            master_rt_inpt = np.copy(animal_unnormalized_rt_inpt)
             animal_start_idx[animal] = 0
-            animal_end_idx[animal] = master_inpt.shape[0] - 1
+            animal_end_idx[animal] = master_y_inpt.shape[0] - 1
             master_y = np.copy(animal_y)
             master_session = animal_session
             master_session_fold_lookup_table = animal_session_fold_lookup
             master_rt = np.copy(animal_rt)
-            master_stimT = np.copy(animal_stimT)
+            master_stim_onset = np.copy(animal_stim_onset)
         else:
-            animal_start_idx[animal] = master_inpt.shape[0]
-            master_inpt = np.concatenate((master_inpt, animal_unnormalized_inpt))
-            animal_end_idx[animal] = master_inpt.shape[0] - 1
+            animal_start_idx[animal] = master_y_inpt.shape[0]
+            master_y_inpt = np.concatenate((master_y_inpt, animal_unnormalized_y_inpt))
+            master_rt_inpt = np.concatenate((master_rt_inpt, animal_unnormalized_rt_inpt))
+            animal_end_idx[animal] = master_y_inpt.shape[0] - 1
             master_y = np.concatenate((master_y, animal_y))
             master_session = np.concatenate((master_session, animal_session))
             master_session_fold_lookup_table = np.concatenate(
                 (master_session_fold_lookup_table, animal_session_fold_lookup))
             master_rt = np.concatenate((master_rt, animal_rt))
-            master_stimT = np.concatenate((master_stimT, animal_stimT))
+            master_stim_onset = np.concatenate((master_stim_onset, animal_stim_onset))
 
     # Write out master data across animals
-    assert np.shape(master_inpt)[0] == np.shape(master_y)[
+    assert np.shape(master_y_inpt)[0] == np.shape(master_y)[
         0], "inpt and y not same length"
     assert len(np.unique(master_session)) == \
            np.shape(master_session_fold_lookup_table)[
                0], "number of unique sessions and session fold lookup don't " \
                    "match"
-    normalized_inpt = np.copy(master_inpt)
-    normalized_inpt[:, 0] = preprocessing.scale(normalized_inpt[:, 0], with_mean=False) # normalize stim size
-    normalized_inpt[:, 1] = preprocessing.scale(normalized_inpt[:, 1], with_mean=False) # normalize stim onset
+    
+    # Z-score continuous variables in design matrix:
+    normalized_y_inpt = np.copy(master_y_inpt)
+    normalized_rt_inpt = np.copy(master_rt_inpt)
+    for i, mat in enumerate([normalized_y_inpt, normalized_rt_inpt]):
+        for c in needs_to_be_normalized[i]:
+            mat[:, c] = preprocessing.scale(mat[:, c], with_mean=False)
+    
     np.savez(
         processed_dmdm_data_path / 'all_animals_concat.npz',
-        normalized_inpt, master_y, master_session, master_rt, master_stimT)
+        normalized_y_inpt, normalized_rt_inpt, master_y, 
+        master_session, master_rt, master_stim_onset)
     np.savez(
         processed_dmdm_data_path / 'all_animals_concat_unnormalized.npz',
-        master_inpt, master_y, master_session, master_rt, master_stimT)
+        master_y_inpt, master_y, master_session, master_rt, master_stim_onset)
     np.savez(
         processed_dmdm_data_path / 'all_animals_concat_session_fold_lookup.npz',
         master_session_fold_lookup_table)
@@ -129,7 +145,7 @@ def main(dname, *, req_num_sessions = 30, num_folds=5):
         animal_list)
 
     out_json = json.dumps(final_animal_eid_dict)
-    f = open(str(processed_dmdm_data_path) + "final_animal_eid_dict.json", "w")
+    f = open(str(processed_dmdm_data_path / "final_animal_eid_dict.json"), "w")
     f.write(out_json)
     f.close()
 
@@ -139,15 +155,16 @@ def main(dname, *, req_num_sessions = 30, num_folds=5):
     for animal in animal_start_idx.keys():
         start_idx = animal_start_idx[animal]
         end_idx = animal_end_idx[animal]
-        inpt = normalized_inpt[range(start_idx, end_idx + 1)]
+        inpt_y = normalized_y_inpt[range(start_idx, end_idx + 1)]
+        inpt_rt = normalized_rt_inpt[range(start_idx, end_idx + 1)]
         y = master_y[range(start_idx, end_idx + 1)]
         session = master_session[range(start_idx, end_idx + 1)]
         rt = master_rt[range(start_idx, end_idx + 1)]
-        stimT = master_stimT[range(start_idx, end_idx + 1)]
-        counter += inpt.shape[0]
+        stim_onset = master_stim_onset[range(start_idx, end_idx + 1)]
+        counter += inpt_y.shape[0]
         np.savez(processed_dmdm_data_path / 'data_by_animal' / (animal + '_processed.npz'),
-                 inpt, y, session, rt, stimT)
-    assert counter == master_inpt.shape[0]
+                 inpt_y, inpt_rt, y, session, rt, stim_onset)
+    assert counter == master_y_inpt.shape[0]
 
 if __name__ == "__main__":
     defopt.run(main)

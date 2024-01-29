@@ -1,5 +1,6 @@
-data/
-results/
+data*/
+results*/
 *.pyc
+.vscode/
 
 note_dmdm.md

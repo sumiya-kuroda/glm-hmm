@@ -1,13 +1,10 @@
 import numpy as np
-import numpy.random as npr
-from scipy.stats import multinomial
 from ssm.util import one_hot
 
 def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard):
     ''' 
-    Create unnormalized input: with first column is changesize,
-    second column as change onset. third column as previous choice, 
-    fourth column as previous change onset.
+    Create unnormalized input for y: with first column is changesize,
+    second column as change onset. third column to sizth column as previous choice
     ''' 
 
     # Remap variables:
@@ -50,9 +47,9 @@ def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard):
 
 def create_design_mat_rt(stim, outcome, reactiontimes, stimT, hazard):
     ''' 
-    Create unnormalized input: with first column is changesize,
-    second column as change onset. third column as previous choice, 
-    fourth column as previous change onset.
+    Create unnormalized input for rt: with first column is changesize,
+    second column as change onset. third column to sizth column as previous choice.
+    seventh column as previous change onset. eigth column as previous reactiontimes.
     ''' 
 
     # Remap variables:
@@ -108,10 +105,11 @@ def ref2FA(choice):
     return new_choice
 
 def remap_vals(choice, stim, stimT, rt, delay=0.5, miss_onset_delay = 2.15):
-    ''' choice: choice vector of size T. 
-                By default, hit = 1, FA = 2, miss = 0, abort = 3
-        stim: change size vector of size T
-        stimT: change onset vector of size T
+    ''' 
+    choice: choice vector of size T. 
+            By default, hit = 1, FA = 2, miss = 0, abort = 3
+    stim: change size vector of size T
+    stimT: change onset vector of size T
     '''
 
     # Treat hits in no change trials (where stim = 0) as FA
@@ -155,12 +153,13 @@ def create_previous_choice_vector(choice):
     return one_hot_prev_choice, prev_rewarded
 
 def create_previous_RT_vector(stimT, reactiontimes, locs_FA_abort):
-    ''' stimT: change onset vector of size T
-        reactiontimes: reaction times from baseline onset
-        locs_FA_abort: locations of FA or abort happened.
-        previous_stimT : vector of size T with previous change onset observed by animal.
-                         0 for FA and abort trials.
-        previous_rt : vector of size T with previous reactiontimes. 0 for miss.
+    ''' 
+    stimT: change onset vector of size T
+    reactiontimes: reaction times from baseline onset
+    locs_FA_abort: locations of FA or abort happened.
+    previous_stimT : vector of size T with previous change onset observed by animal.
+                     0 for FA and abort trials.
+    previous_rt : vector of size T with previous reactiontimes. 0 for miss.
     '''
     stimT_updated = stimT.copy()
     for i, loc in enumerate(locs_FA_abort):

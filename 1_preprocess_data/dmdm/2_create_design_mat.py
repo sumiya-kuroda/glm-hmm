@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 import numpy as np
-from sklearn import preprocessing
 import numpy.random as npr
+from sklearn import preprocessing
 import os
 import json
 from collections import defaultdict
@@ -15,15 +15,15 @@ npr.seed(65)
 
 def main(dname, *, req_num_sessions = 30, num_folds=5):
     """
-    Continue preprocessing of dmdm dataset and create design matrix for GLM-HMM
+    Continue preprocessing of dmdm dataset and create design matrix for GLM(-HMM)
     
     :param str dname: name of dataset needs to be preprocessed
     :param int req_num_sessions: Required number of sessions for each animal
-    :param int num_folds: Number of folds for cross-validation
+    :param int num_folds: Number of folds for k-fold cross-validation
     """
     dirname = Path(os.path.dirname(os.path.abspath(__file__)))
     dmdm_data_path =  dirname.parents[1] / "data" / "dmdm" / dname
-    processed_dmdm_data_path =  dmdm_data_path / "data_for_cluster_rt"
+    processed_dmdm_data_path =  dmdm_data_path / "data_for_cluster"
 
     # Create directories for saving data:
     Path(processed_dmdm_data_path).mkdir(parents=True, exist_ok=True)

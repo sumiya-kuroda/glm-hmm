@@ -1,14 +1,11 @@
 import autograd.numpy as np
-import autograd.numpy.random as npr
 import os
 from pathlib import Path
-
-npr.seed(65)
 
 def get_file_dir(): # dmdm dir
     return Path(os.path.dirname(os.path.realpath(__file__)))
 
-# Load data
+# Functions to load data
 def load_data(animal_file):
     container = np.load(animal_file, allow_pickle=True)
     data = [container[key] for key in container]
@@ -32,7 +29,7 @@ def load_animal_list(list_file):
     animal_list = data[0]
     return animal_list
 
-# Loat results
+# Function to load results
 def load_glm_vectors(glm_vectors_file):
     container = np.load(glm_vectors_file)
     data = [container[key] for key in container]

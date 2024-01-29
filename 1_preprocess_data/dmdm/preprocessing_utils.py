@@ -13,7 +13,7 @@ def scan_sessions(path):
     return matches
 
 def get_animal_name(eid):
-    # get session id:
+    # Get session id:
     raw_session_id = eid.split('Subjects/')[1]
     # Get animal:
     animal = raw_session_id.split('/')[0]
@@ -38,8 +38,8 @@ def get_all_unnormalized_data_this_session(eid, path_to_dataset):
     # Use sessions that have both early and late blocks
     trials_to_study = np.where((hazardblock == 0) | (hazardblock == 1))[0]
 
-    # Create design mat = matrix of size T x 6, with entries for
-    # change size/change timing/past choice/past change timing/past choice timing/bias block
+    # Create design mat for both y and rt. Continuous variables are unnormalized. Edit design_mat_utils.py
+    # to change the entries. No bias intercept included here.
     unnormalized_inpt_y, outcome_noref, continuous_column_y = \
         create_design_mat_y(changesize[trials_to_study],
                             outcome[trials_to_study],
@@ -47,7 +47,7 @@ def get_all_unnormalized_data_this_session(eid, path_to_dataset):
                             stimT[trials_to_study],
                             hazardblock[trials_to_study])
 
-    unnormalized_inpt_rt, rt_1d, COnset_1d, continuous_column_rt = \
+    unnormalized_inpt_rt, rt_1d, stim_onset_1d, continuous_column_rt = \
         create_design_mat_rt(changesize[trials_to_study],
                              outcome[trials_to_study],
                              reactiontimes[trials_to_study],
@@ -57,20 +57,20 @@ def get_all_unnormalized_data_this_session(eid, path_to_dataset):
     session = [session_id for i in range(changesize[trials_to_study].shape[0])]
     y = np.expand_dims(outcome_noref, axis=1)
     rt = np.expand_dims(rt_1d, axis=1)
-    COnset = np.expand_dims(COnset_1d, axis=1)
+    stim_onset = np.expand_dims(stim_onset_1d, axis=1)
 
     unnormalized_inpts = [unnormalized_inpt_y, unnormalized_inpt_rt]
     needs_to_be_normalized = [continuous_column_y, continuous_column_rt]
 
-    return animal, session, y, rt, COnset, unnormalized_inpts, needs_to_be_normalized
+    return animal, session, y, rt, stim_onset, unnormalized_inpts, needs_to_be_normalized
 
 def get_raw_data(eid, path_to_dataset):
     print(eid)
-    # get session id:
+    # Get session id:
     raw_session_id = eid.split('Subjects/')[1]
     # Get animal:
     animal = raw_session_id.split('/')[0]
-    # replace '/' with dash in session ID
+    # Replace '/' with dash in session ID
     session_id = raw_session_id.replace('/', '-')
 
     # Get trial data
@@ -83,7 +83,10 @@ def get_raw_data(eid, path_to_dataset):
     return animal, session_id, changesize, hazardblock, outcome, reactiontimes, stimT
 
 def create_train_test_sessions(session, num_folds=5):
-    # create a session-fold lookup table
+    """
+    Create a session-fold lookup table
+    """
+     
     num_sessions = len(np.unique(session))
     # Map sessions to folds:
     unshuffled_folds = np.repeat(np.arange(num_folds),

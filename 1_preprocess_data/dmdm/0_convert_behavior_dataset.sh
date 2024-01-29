@@ -6,7 +6,7 @@ declare OPTIND
 OPTIND=1
 
 usage="$(basename "$0") [-h] [-i input] [-f format]
-Convert behavior data
+Convert behavior data from .mat to .npy
 where:
     -h  show this help text
     -i  input

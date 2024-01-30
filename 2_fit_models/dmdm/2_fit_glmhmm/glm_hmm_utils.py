@@ -2,11 +2,10 @@
 import sys
 import ssm
 import autograd.numpy as np
+import numpy as onp
 import seaborn as sns
 import matplotlib.pyplot as plt
-
-sys.path.append('../') 
-from kfold_cv import create_cv_frame_for_plotting
+import pandas as pd
 
 def fit_glm_hmm(datas, inputs, masks, K, D, M, C, N_em_iters,
                 transition_alpha, prior_sigma, global_fit,
@@ -68,14 +67,31 @@ def fit_glm_hmm(datas, inputs, masks, K, D, M, C, N_em_iters,
                        initialize=False,
                        tolerance=10 ** -4)
     # Save raw parameters of HMM, as well as loglikelihood during training
-    if lls is not None: # lls fitting returns None when converged
-        np.savez(save_title, this_hmm.params, lls)
+    np.savez(save_title, this_hmm.params, lls)
+
     return None
+
+def create_cv_frame_for_plotting(cvbt_folds_model):
+    # Identify best cvbt:
+    mean_cvbt = onp.mean(cvbt_folds_model, axis=1)
+    loc_best = onp.where(mean_cvbt == max(mean_cvbt))[0]
+    best_val = max(mean_cvbt)
+    # Create dataframe for plotting
+    num_models = cvbt_folds_model.shape[0]
+    num_folds = cvbt_folds_model.shape[1]
+    # Create pandas dataframe:
+    data_for_plotting_df = pd.DataFrame({
+        'model':
+            onp.repeat(onp.arange(num_models), num_folds),
+        'cv_bit_trial':
+            cvbt_folds_model.flatten()
+    })
+    return data_for_plotting_df, loc_best, best_val
 
 def plot_states(weight_vectors,
                 log_transition_matrix,
-                cv_file,
-                cv_file_train,
+                cv,
+                cv_train,
                 figure_directory,
                 K,
                 save_title='best_params_cross_validation_K_',
@@ -84,13 +100,10 @@ def plot_states(weight_vectors,
                 cols = ["#7e1e9c", "#0343df", "#15b01a", "#bf77f6", "#95d0fc","#96f97b"]):
 
     M = weight_vectors.shape[2] - 1
-    data_for_plotting_df, loc_best, best_val, glm_lapse_model = \
-        create_cv_frame_for_plotting(cv_file)
+    data_for_plotting_df, loc_best, best_val = \
+        create_cv_frame_for_plotting(cv)
     train_data_for_plotting_df, train_loc_best, train_best_val, \
-    train_glm_lapse_model = create_cv_frame_for_plotting(cv_file_train)
-
-    glm_lapse_model_cvbt_means = np.mean(glm_lapse_model, axis=1)
-    train_glm_lapse_model_cvbt_means = np.mean(train_glm_lapse_model, axis=1)
+          = create_cv_frame_for_plotting(cv_train)
     
     fig = plt.figure(figsize=(4 * 8, 10),
                         dpi=80,
@@ -106,7 +119,7 @@ def plot_states(weight_vectors,
     plt.subplot(1, 3, 1)
     for k in range(K):
         plt.plot(range(M + 1),
-                    -weight_vectors[k][0],
+                    weight_vectors[k][0],
                     marker='o',
                     label='State ' + str(k + 1),
                     color=cols_K[k],
@@ -121,16 +134,16 @@ def plot_states(weight_vectors,
     # plt.ylim((-3, 14))
     plt.ylabel("Weight", fontsize=30)
     plt.xlabel("Covariate", fontsize=30, labelpad=20)
-    plt.title("GLM Weights: Choice = R", fontsize=40)
+    plt.title("GLM Weights for y", fontsize=40)
 
     plt.subplot(1, 3, 2)
-    transition_matrix = np.exp(log_transition_matrix)
+    transition_matrix = onp.exp(log_transition_matrix)
     plt.imshow(transition_matrix, vmin=0, vmax=1)
     for i in range(transition_matrix.shape[0]):
         for j in range(transition_matrix.shape[1]):
             text = plt.text(j,
                             i,
-                            np.around(transition_matrix[i, j],
+                            onp.around(transition_matrix[i, j],
                                         decimals=3),
                             ha="center",
                             va="center",
@@ -138,6 +151,7 @@ def plot_states(weight_vectors,
                             fontsize=30)
     plt.ylabel("Previous State", fontsize=30)
     plt.xlabel("Next State", fontsize=30)
+    plt.colorbar()
     plt.xlim(-0.5, K - 0.5)
     plt.ylim(-0.5, K - 0.5)
     plt.xticks(range(0, K), ('1', '2', '3', '4', '4', '5', '6', '7',
@@ -149,8 +163,7 @@ def plot_states(weight_vectors,
     plt.title("Retrieved", fontsize=40)
 
     plt.subplot(1, 3, 3)
-    g = sns.lineplot(
-        data_for_plotting_df['model'],
+    g = sns.lineplot(data_for_plotting_df['model'],
         data_for_plotting_df['cv_bit_trial'],
         err_style="bars",
         mew=0,
@@ -174,19 +187,14 @@ def plot_states(weight_vectors,
     plt.xlabel("Model", fontsize=30)
     plt.ylabel("Normalized LL", fontsize=30)
     plt.xticks([0, 1, 2, 3, 4],
-                ['1 State', '2 State', '3 State', '4 State', '5 State'],
+                ['2 State', '3 State', '4 State', '5 State', '6 State'],
                 rotation=45,
                 fontsize=24)
     plt.yticks(fontsize=15)
-    plt.axhline(y=glm_lapse_model_cvbt_means[2],
-                color=cols[2],
-                label="Lapse (test)",
-                alpha=0.9,
-                lw=4)
     plt.legend(loc='upper right', fontsize=30)
     plt.tick_params(axis='y')
-    plt.yticks([0.2, 0.3, 0.4, 0.5], fontsize=30)
-    plt.ylim((0.2, 0.55))
+    # plt.yticks([0.2, 0.3, 0.4, 0.5], fontsize=30)
+    # plt.ylim((0.2, 0.55))
     plt.title("Model Comparison", fontsize=40)
     fig.tight_layout()
 

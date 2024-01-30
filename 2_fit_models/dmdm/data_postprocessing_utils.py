@@ -54,58 +54,57 @@ def calculate_state_permutation(hmm_params):
     :param hmm_params:
     :return: permutation
     '''
-    # GLM weights (note: we have to take negative, because we are interested
-    # in weights corresponding to p(y = 1) = 1/(1+e^(-w.x)), but returned
-    # weights from
-    # code are w such that p(y = 1) = e(w.x)/1+e(w.x))
-    glm_weights = -hmm_params[2]
+    glm_weights = hmm_params[2]
     K = glm_weights.shape[0]
-    if K == 3:
-        # want states ordered as engaged/bias left/bias right
-        M = glm_weights.shape[2] - 1
-        # bias coefficient is last entry in dimension 2
-        engaged_loc = \
-            np.where((glm_weights[:, 0, 0] == max(glm_weights[:, 0, 0])))[0][0]
-        reduced_weights = np.copy(glm_weights)
-        # set row in reduced weights corresponding to engaged to have a bias
-        # that will not cause it to have largest bias
-        reduced_weights[engaged_loc, 0, M] = max(glm_weights[:, 0, M]) - 0.001
-        bias_left_loc = \
-            np.where(
-                (reduced_weights[:, 0, M] == min(reduced_weights[:, 0, M])))[
-                0][0]
-        state_order = [engaged_loc, bias_left_loc]
-        bias_right_loc = np.arange(3)[np.where(
-            [range(3)[i] not in state_order for i in range(3)])][0]
-        permutation = np.array([engaged_loc, bias_left_loc, bias_right_loc])
-    elif K == 4:
-        # want states ordered as engaged/bias left/bias right
-        M = glm_weights.shape[2] - 1
-        # bias coefficient is last entry in dimension 2
-        engaged_loc = \
-            np.where((glm_weights[:, 0, 0] == max(glm_weights[:, 0, 0])))[0][0]
-        reduced_weights = np.copy(glm_weights)
-        # set row in reduced weights corresponding to engaged to have a bias
-        # that will not
-        reduced_weights[engaged_loc, 0, M] = max(glm_weights[:, 0, M]) - 0.001
-        bias_right_loc = \
-            np.where(
-                (reduced_weights[:, 0, M] == max(reduced_weights[:, 0, M])))[
-                0][0]
-        bias_left_loc = \
-            np.where(
-                (reduced_weights[:, 0, M] == min(reduced_weights[:, 0, M])))[
-                0][0]
-        state_order = [engaged_loc, bias_left_loc, bias_right_loc]
-        other_loc = np.arange(4)[np.where(
-            [range(4)[i] not in state_order for i in range(4)])][0]
-        permutation = np.array(
-            [engaged_loc, bias_left_loc, bias_right_loc, other_loc])
-    else:
-        # order states by engagement: with the most engaged being first.
-        # Note: argsort sorts inputs from smallest to largest (hence why we
-        # convert to -ve glm_weights)
-        permutation = np.argsort(-glm_weights[:, 0, 0])
+
+    permutation = np.argsort(-glm_weights[:, 0, 0])
+
+    # if K == 3:
+    #     # want states ordered as engaged/bias left/bias right
+    #     M = glm_weights.shape[2] - 1
+    #     # bias coefficient is last entry in dimension 2
+    #     engaged_loc = \
+    #         np.where((glm_weights[:, 0, 0] == max(glm_weights[:, 0, 0])))[0][0]
+    #     reduced_weights = np.copy(glm_weights)
+    #     # set row in reduced weights corresponding to engaged to have a bias
+    #     # that will not cause it to have largest bias
+    #     reduced_weights[engaged_loc, 0, M] = max(glm_weights[:, 0, M]) - 0.001
+    #     bias_left_loc = \
+    #         np.where(
+    #             (reduced_weights[:, 0, M] == min(reduced_weights[:, 0, M])))[
+    #             0][0]
+    #     state_order = [engaged_loc, bias_left_loc]
+    #     bias_right_loc = np.arange(3)[np.where(
+    #         [range(3)[i] not in state_order for i in range(3)])][0]
+    #     permutation = np.array([engaged_loc, bias_left_loc, bias_right_loc])
+    # elif K == 4:
+    #     # want states ordered as engaged/bias left/bias right
+    #     M = glm_weights.shape[2] - 1
+    #     # bias coefficient is last entry in dimension 2
+    #     engaged_loc = \
+    #         np.where((glm_weights[:, 0, 0] == max(glm_weights[:, 0, 0])))[0][0]
+    #     reduced_weights = np.copy(glm_weights)
+    #     # set row in reduced weights corresponding to engaged to have a bias
+    #     # that will not
+    #     reduced_weights[engaged_loc, 0, M] = max(glm_weights[:, 0, M]) - 0.001
+    #     bias_right_loc = \
+    #         np.where(
+    #             (reduced_weights[:, 0, M] == max(reduced_weights[:, 0, M])))[
+    #             0][0]
+    #     bias_left_loc = \
+    #         np.where(
+    #             (reduced_weights[:, 0, M] == min(reduced_weights[:, 0, M])))[
+    #             0][0]
+    #     state_order = [engaged_loc, bias_left_loc, bias_right_loc]
+    #     other_loc = np.arange(4)[np.where(
+    #         [range(4)[i] not in state_order for i in range(4)])][0]
+    #     permutation = np.array(
+    #         [engaged_loc, bias_left_loc, bias_right_loc, other_loc])
+    # else:
+    #     # order states by engagement: with the most engaged being first.
+    #     # Note: argsort sorts inputs from smallest to largest (hence why we
+    #     # convert to -ve glm_weights)
+    #     permutation = np.argsort(-glm_weights[:, 0, 0])
     # assert that all indices are present in permutation exactly once:
     assert len(permutation) == K, "permutation is incorrect size"
     assert check_all_indices_present(permutation, K), "not all indices " \

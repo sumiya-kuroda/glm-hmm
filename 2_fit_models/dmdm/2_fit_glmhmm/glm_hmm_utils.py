@@ -90,8 +90,6 @@ def create_cv_frame_for_plotting(cvbt_folds_model):
 
 def plot_states(weight_vectors,
                 log_transition_matrix,
-                cv,
-                cv_train,
                 figure_directory,
                 K,
                 save_title='best_params_cross_validation_K_',
@@ -100,12 +98,8 @@ def plot_states(weight_vectors,
                 cols = ["#7e1e9c", "#0343df", "#15b01a", "#bf77f6", "#95d0fc","#96f97b"]):
 
     M = weight_vectors.shape[2] - 1
-    data_for_plotting_df, loc_best, best_val = \
-        create_cv_frame_for_plotting(cv)
-    train_data_for_plotting_df, train_loc_best, train_best_val, \
-          = create_cv_frame_for_plotting(cv_train)
     
-    fig = plt.figure(figsize=(4 * 8, 10),
+    fig = plt.figure(figsize=((K+1)*10, 10),
                         dpi=80,
                         facecolor='w',
                         edgecolor='k')
@@ -116,27 +110,7 @@ def plot_states(weight_vectors,
                         wspace=0.8,
                         hspace=0.5)
     
-    plt.subplot(1, 3, 1)
-    for k in range(K):
-        plt.plot(range(M + 1),
-                    weight_vectors[k][0],
-                    marker='o',
-                    label='State ' + str(k + 1),
-                    color=cols_K[k],
-                    lw=4)
-    plt.xticks(list(range(0, len(labels_for_plot))),
-                labels_for_plot,
-                rotation='20',
-                fontsize=24)
-    plt.yticks(fontsize=30)
-    plt.legend(fontsize=30)
-    plt.axhline(y=0, color="k", alpha=0.5, ls="--")
-    # plt.ylim((-3, 14))
-    plt.ylabel("Weight", fontsize=30)
-    plt.xlabel("Covariate", fontsize=30, labelpad=20)
-    plt.title("GLM Weights for y", fontsize=40)
-
-    plt.subplot(1, 3, 2)
+    plt.subplot(1, K + 1, 1)
     transition_matrix = onp.exp(log_transition_matrix)
     plt.imshow(transition_matrix, vmin=0, vmax=1)
     for i in range(transition_matrix.shape[0]):
@@ -162,7 +136,53 @@ def plot_states(weight_vectors,
                 fontsize=30)
     plt.title("Retrieved", fontsize=40)
 
-    plt.subplot(1, 3, 3)
+    choice_label_mapping = {0: 'miss', 1: 'Hit', 2: 'FA', 3: 'abort'}
+    for k in range(K):
+        Ws = weight_vectors[k]
+        K_prime = Ws.shape[0] # C
+        plt.subplot(1, K + 1, 2 + k)
+        for j in range(K_prime): # each category 
+            l = plt.plot(range(M + 1), 
+                         Ws[j], # plot weights with orginal signs
+                         marker='o',
+                         label=choice_label_mapping[j],
+                         lw=4)
+
+        plt.xticks(list(range(0, len(labels_for_plot))),
+                    labels_for_plot,
+                    rotation='20',
+                    fontsize=24)
+        plt.yticks(fontsize=30)
+        plt.legend(fontsize=30)
+        plt.axhline(y=0, color="k", alpha=0.5, ls="--")
+        # plt.ylim((-3, 14))
+        plt.ylabel("Weight", fontsize=30)
+        plt.xlabel("Covariate", fontsize=30, labelpad=20)
+        plt.title("y GLM: State Zk =" + str(k + 1), fontsize=40)
+
+    fig.tight_layout()
+    fig.savefig(figure_directory / (save_title + str(K) + '.png'))
+    plt.axis('off')
+    plt.close(fig)
+
+
+def plot_model_comparison(cv,
+                          cv_train,
+                          K_vals,
+                          figure_directory,
+                          save_title='best_params_performance_',
+                          cols = ["#7e1e9c", "#0343df", "#15b01a", "#bf77f6", "#95d0fc","#96f97b"]):
+
+    data_for_plotting_df, loc_best, best_val = \
+        create_cv_frame_for_plotting(cv)
+    train_data_for_plotting_df, train_loc_best, train_best_val, \
+          = create_cv_frame_for_plotting(cv_train)
+    
+    fig = plt.figure(figsize=(10, 10),
+                        dpi=80,
+                        facecolor='w',
+                        edgecolor='k')
+
     g = sns.lineplot(data_for_plotting_df['model'],
         data_for_plotting_df['cv_bit_trial'],
         err_style="bars",
@@ -186,8 +206,8 @@ def plot_states(weight_vectors,
         lw=4)
     plt.xlabel("Model", fontsize=30)
     plt.ylabel("Normalized LL", fontsize=30)
-    plt.xticks([0, 1, 2, 3, 4],
-                ['2 State', '3 State', '4 State', '5 State', '6 State'],
+    plt.xticks(range(len(K_vals)),
+                [str(k) + ' states' for k in K_vals],
                 rotation=45,
                 fontsize=24)
     plt.yticks(fontsize=15)
@@ -196,8 +216,7 @@ def plot_states(weight_vectors,
     # plt.yticks([0.2, 0.3, 0.4, 0.5], fontsize=30)
     # plt.ylim((0.2, 0.55))
     plt.title("Model Comparison", fontsize=40)
-    fig.tight_layout()
 
-    fig.savefig(figure_directory / (save_title + str(K) + '.png'))
+    fig.savefig(figure_directory / (save_title + '.png'))
     plt.axis('off')
     plt.close(fig)

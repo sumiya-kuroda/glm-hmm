@@ -7,6 +7,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
 
+sys.path.append('../') # a lazy trick to search parent dir
+from data_labels import create_abort_mask, partition_data_by_session
+from data_postprocessing_utils import get_marginal_posterior
+
 def fit_glm_hmm(datas, inputs, masks, K, D, M, C, N_em_iters,
                 transition_alpha, prior_sigma, global_fit,
                 params_for_initialization, save_title):
@@ -218,5 +222,46 @@ def plot_model_comparison(cv,
     plt.title("Model Comparison", fontsize=40)
 
     fig.savefig(figure_directory / (save_title + '.png'))
+    plt.axis('off')
+    plt.close(fig)
+
+def plot_state_occupancy(inpt_y, inpt_rt, y, session, rt, stim_onset,
+                         K, hmm_params,
+                         animal_name,
+                         figure_directory,
+                         save_title='best_params_state_occupancy_',
+                         cols = ["#7e1e9c", "#0343df", "#15b01a", "#bf77f6", "#95d0fc","#96f97b"]):
+
+    # get state occupancies:
+    inpt_y = np.hstack((inpt_y, np.ones((len(inpt_y),1))))
+    y = y.astype('int')
+    abort_idx = np.where(y == 3)[0]
+    nonviolation_idx, mask = create_abort_mask(abort_idx, inpt_y.shape[0])
+
+    y[np.where(y == 3), :] = 2
+    inputs, datas, masks = partition_data_by_session(
+        inpt_y, y, mask, session)
+
+    C = hmm_params[2].shape[1] 
+    posterior_probs = get_marginal_posterior(inputs, datas, masks, C,
+                                             hmm_params, K, range(K))
+    states_max_posterior = np.argmax(posterior_probs, axis=1)
+
+    fig = plt.figure(figsize=(10, 10),
+                    dpi=80,
+                    facecolor='w',
+                    edgecolor='k')   
+    plt.hist(states_max_posterior)
+    plt.ylabel("# trials", fontsize=30)
+    plt.xlabel("State", fontsize=30)
+    plt.xticks(range(K),
+                ['State ' + str(k + 1) for k in range(K)],
+                rotation=45,
+                fontsize=24)
+    plt.yticks(fontsize=30)
+    plt.title("State occuupancies", fontsize=40)
+    fig.suptitle(animal_name, fontsize=40)
+
+    fig.savefig(figure_directory / (save_title + str(K) + '.png'))
     plt.axis('off')
     plt.close(fig)

@@ -96,3 +96,9 @@ def load_cv_arr(file):
     data = [container[key] for key in container]
     cvbt_folds_model = data[0]
     return cvbt_folds_model
+
+def load_global_params(global_params_file):
+    container = np.load(global_params_file, allow_pickle=True)
+    data = [container[key] for key in container]
+    global_params = data[0]
+    return global_params

@@ -122,19 +122,19 @@ def check_all_indices_present(permutation, K):
     return True
 
 
-def get_marginal_posterior(inputs, datas, masks, hmm_params, K, permutation):
+def get_marginal_posterior(inputs, datas, masks, C,
+                           hmm_params, K, permutation):
     # Run forward algorithm on hmm with these parameters and collect gammas:
     M = inputs[0].shape[1]
     D = datas[0].shape[1]
     this_hmm = ssm.HMM(K, D, M,
-                       observations="input_driven_obs",
-                       observation_kwargs=dict(C=2),
+                       observations="input_driven_obs_multinominal",
+                       observation_kwargs=dict(C=C),
                        transitions="standard")
     this_hmm.params = hmm_params
     # Get expected states:
     expectations = [this_hmm.expected_states(data=data, input=input,
-                                             mask=np.expand_dims(mask,
-                                                                 axis=1))[0]
+                                             mask=mask)[0]
                     for data, input, mask
                     in zip(datas, inputs, masks)]
     # Convert this now to one array:

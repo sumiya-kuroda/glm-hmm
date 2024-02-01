@@ -4,7 +4,7 @@ from ssm.util import one_hot
 def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard):
     ''' 
     Create unnormalized input for y: with first column is changesize,
-    second column as change onset. third column to sizth column as previous choice
+    second column as change onset. third column as previous choice
     ''' 
 
     # Remap variables:
@@ -24,22 +24,12 @@ def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard):
     design_mat[:, 0] = stim_updated # unnormalized
 
     # Change onset:
-    design_mat[:, 1] = stimT_updated # unnormalized
+    design_mat[:, 1] = stimT # unnormalized
     # design_mat[:, 1] = hazard
 
-    # previous Change onset
-    # previous_stimT = np.hstack([np.array(stimT_updated[0]), stimT_updated])[:-1]
-    # design_mat[:, 1] = preprocessing.scale(previous_stimT)
-
     # previous choice vector:
-    previous_choice, rewarded = create_previous_choice_vector(choice_updated)
-    # design_mat[:, 2:6] = previous_choice
-    design_mat[:, 2] = rewarded
-
-    # previous change onset and reactiontime:
-    # previous_stimT, previous_rt = create_previous_RT_vector(stimT, reactiontimes, locs_FA_abort)
-    # design_mat[:, 3] = previous_stimT
-    # design_mat[:, 4] = previous_rt
+    prev_choice = create_previous_choice_vector(choice_updated)
+    design_mat[:, 2] = prev_choice
 
     continuous_column = [0, 1]
 
@@ -67,24 +57,24 @@ def create_design_mat_rt(stim, outcome, reactiontimes, stimT, hazard):
                    miss_onset_delay = 0)
     
     # Change size:
-    design_mat = np.zeros((len(stimT), 8))
+    design_mat = np.zeros((len(stimT), 5))
     design_mat[:, 0] = stim_updated # unnormalized
 
     # Change onset:
     design_mat[:, 1] = stimT_updated # unnormalized
 
     # previous choice vector:
-    previous_choice, rewarded = create_previous_choice_vector(choice_updated)
-    design_mat[:, 2:6] = previous_choice
+    previous_choice = create_previous_choice_vector(choice_updated)
+    design_mat[:, 2] = previous_choice
     # design_mat[:, 4] = rewarded
 
     # previous Change onset
     previous_stimT = np.hstack([np.array(stimT_updated[0]), stimT_updated])[:-1]
-    design_mat[:, 6] = previous_stimT # unnormalized
+    design_mat[:, 3] = previous_stimT # unnormalized
 
     # previous reactiontimes
     previous_rt = np.hstack([np.array(rt_updated[0]), rt_updated])[:-1]
-    design_mat[:, 7] = previous_rt # unnormalized
+    design_mat[:, 4] = previous_rt # unnormalized
     # WSLS
 
     # previous_stimT = np.hstack([np.array(stimT_updated[0]), stimT_updated])[:-1]
@@ -95,7 +85,7 @@ def create_design_mat_rt(stim, outcome, reactiontimes, stimT, hazard):
     # design_mat[:, 3] = previous_stimT
     # design_mat[:, 4] = previous_rt
 
-    continuous_column = [0, 1, 6, 7]
+    continuous_column = [0, 1, 3,4]
 
     return design_mat, rt_updated, stimT_updated, continuous_column
 
@@ -141,16 +131,13 @@ def remap_vals(choice, stim, stimT, rt, delay=0.5, miss_onset_delay = 2.15):
 def create_previous_choice_vector(choice):
     # The original choice vectors are
     # hit with changes = 1, FA = 2, miss = 0, abort = 3.
-    # We will one-hot encode this vector as well as create a new vector about
-    # whther mice got rewarded or punished
+    # We will create a new vector about how deviant animal was performing in the previous trial.
     previous_choice = np.hstack([np.array(choice[0]), choice])[:-1]
-    # C = len(np.unique(choice)) but some sessions do not have aborts
-    one_hot_prev_choice = one_hot(previous_choice, 4)
 
-    choice_mapping = {1: 1, 2: -1, 0: 0, 3: 0}
-    prev_rewarded = [choice_mapping[old_choice] for old_choice in previous_choice]
+    choice_mapping = {1: 0, 2: 1, 0: -1, 3: 1}
+    prev_choice = [choice_mapping[old_choice] for old_choice in previous_choice]
 
-    return one_hot_prev_choice, prev_rewarded
+    return prev_choice
 
 def create_previous_RT_vector(stimT, reactiontimes, locs_FA_abort):
     ''' 

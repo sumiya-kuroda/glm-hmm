@@ -72,12 +72,12 @@ This creates `results` folder. With the processed dataset, you can fit the GLM, 
 
 After GLM fitting, you should be able to run GLM-HMM. The global GLM-HMM should be run next, as it explores all the parameter space and find a possible parameter candidate for fitting GLM-HMM to individual animal. As Ashwood described in her paper, we use EM algorithm here, which takes quite a lot of computational resources. EM algorithm does not guarantee that we will find global maxima, so we need to fit with several iterations (which also increases required computation resources). Thus HPC usage is highly recommended. 
 
-Finally GLM-HMMs can be fit to the data from individual animals. We also use Maximum A Priori (MAP) Estimation here, as the number of trials available for each animal is very limited. (See [here](https://github.com/zashwood/ssm/blob/e9b408b79e2ab22a05ca93c3a1f78a7dae461992/notebooks/2b%20Input%20Driven%20Observations%20(GLM-HMM).ipynb) for more explanation.)
+Finally GLM-HMMs can be fit to the data from individual animals. We also use Maximum A Priori (MAP) Estimation here, as the number of trials available for each animal is very limited. (See [here](https://github.com/zashwood/ssm/blob/e9b408b79e2ab22a05ca93c3a1f78a7dae461992/notebooks/2b%20Input%20Driven%20Observations%20(GLM-HMM).ipynb) for more explanation.) This involves two additional hyperparameters: alpha and sigma. We use k-fold cross-validation here to find the best pairs of them. The Jupyter notebooks for GLM-HMM also generate some basic figures that will make easy to interpret the results.
 
 It is completely optional to fit the lapse model to the dataset. While not used for any initialization purposes, this allows model comparison with the global and individual GLM-HMMs. 
           
 ### 3_make_figures
-This creates `figures` folder. Assuming that you have downloaded and preprocessed the datasets, and that you have fit all models on these datasets, you can start some exploratory analysis and reproduce some figures. 
+This creates `figures` folder. Assuming that you have downloaded and preprocessed the datasets, and that you have fit all models on these datasets, you can start some exploratory analysis and reproduce some figures. `3_make_figures/dmdm/write_results.py` will save the outputs so that you can run other analysis on trials characterized by GLM-HMM. Enjoy!
 
 
 ## Troubleshooting

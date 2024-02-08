@@ -33,7 +33,7 @@ class KFoldCV(object):
                  self.Alpha_vals = Alpha_vals
                  self.Sigma_vals = Sigma_vals
                  self.animal = animal
-                 if global_fit == True:
+                 if (global_fit == True) & ('HMM' in self.model):
                     if (len(Alpha_vals) > 1 or len(Sigma_vals) > 1) :
                         raise ValueError("MLE only supports alpha = 1 and sigma = inf.")
                     if not self.animal is None :
@@ -461,15 +461,16 @@ def calculate_baseline_test_ll(train_y, test_y, C):
         ll0 += test_class_totals[c] * np.log(train_class_probs[c])
     return ll0
 
-def calculate_glm_test_loglikelihood(glm_weights_file, test_y, test_inpt, M,
-                                     C, outcome_dict):
-    loglikelihood_train, glm_vectors = load_glm_vectors(glm_weights_file)
+def calculate_glm_test_loglikelihood(glm_weights_file, test_y, test_inpt, 
+                                      M, C, outcome_dict):
+    _, glm_vectors = load_glm_vectors(glm_weights_file)
     # Calculate test loglikelihood
     new_glm = glm(M, C, outcome_dict, obs='Categorical') # multinomial distribution
     # Set parameters to fit parameters:
-    new_glm.params = glm_vectors
+    new_glm.Wk = glm_vectors
     # Get loglikelihood of training data:
     loglikelihood_test = new_glm.log_marginal([test_y], [test_inpt], None, None)
+    # loglikelihood_train = new_glm.log_marginal([test_y], [test_inpt], [test_mask], None)
     return loglikelihood_test
 
 def calculate_cv_bit_trial(ll_model, ll_0, n_trials):

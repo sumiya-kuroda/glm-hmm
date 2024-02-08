@@ -2,6 +2,7 @@ import autograd.numpy as np
 import os
 from pathlib import Path
 import re
+from functools import reduce
 
 def get_file_dir(): # dmdm dir
     return Path(os.path.dirname(os.path.realpath(__file__)))
@@ -38,39 +39,34 @@ def load_glm_vectors(glm_vectors_file):
     recovered_weights = data[1]
     return loglikelihood_train, recovered_weights
 
-def load_lapse_params(lapse_file):
-    container = np.load(lapse_file, allow_pickle=True)
-    data = [container[key] for key in container]
-    lapse_loglikelihood = data[0]
-    lapse_glm_weights = data[1]
-    lapse_glm_weights_std = data[2],
-    lapse_p = data[3]
-    lapse_p_std = data[4]
-    return lapse_loglikelihood, lapse_glm_weights, lapse_glm_weights_std, \
-           lapse_p, lapse_p_std
-
-def load_glmhmm_data(data_file):
-    container = np.load(data_file, allow_pickle=True)
+def load_glmhmm_data(glmhmm_output):
+    # load hmm output files
+    container = np.load(glmhmm_output, allow_pickle=True)
     data = [container[key] for key in container]
     this_hmm_params = data[0]
     lls = data[1]
-    return [this_hmm_params, lls]
+    alpha = data[2]
+    sigma = data[3]
+    global_fit = data[4]
+    return this_hmm_params, lls, alpha, sigma, global_fit
 
-def scan_glm_hmm_output(path, fname_header=''):
+def scan_glmhmm_output(path, fname_header=''):
     matched_iter = []
     matched_file = []
     for dirpath, _, filenames in os.walk(str(path)):
-        for filename in [f for f in filenames if f.startswith(fname_header)]:
-            iter_num = re.findall('\d+', filename)
-            matched_iter.append(iter_num)
+        for filename in [f for f in filenames 
+                         if f.startswith(fname_header)]:
+            all_num = re.findall('\d+', filename)
+            matched_iter.append([int(i) for i in all_num if int(i) < 100][0]) # save iter num only
             matched_file.append(str(Path(dirpath) / filename))
-
     if not matched_file:
         raise FileNotFoundError('No GLM-HMM output files found in ' + str(path))
     return matched_iter, matched_file
 
-def get_file_name_for_best_model_fold(cvbt_folds_model, K, overall_dir: Path,
-                                      best_init_cvbt_dict, model, fname_header):
+def get_file_name_for_best_glmhmm_fold(cvbt_folds_model, model_idx, K, 
+                                        alpha_idx=None, alpha=None, sigma_idx=None, sigma=None, overall_dir: Path = None,
+                                        best_init_cvbt_dict=None, model=None, fname_header=None,
+                                        global_fit=True, map_params=None, animal=None):
     '''
     Get the file name for the best initialization for the K value specified
     :param cvbt_folds_model:
@@ -82,14 +78,20 @@ def get_file_name_for_best_model_fold(cvbt_folds_model, K, overall_dir: Path,
     '''
     # Identify best fold for best model:
     # loc_best = K - 1
-    loc_best = 0
-    best_fold = np.where(cvbt_folds_model[loc_best, :] == \
-                         max(cvbt_folds_model[loc_best, :]))[0][0]
+    # loc_best = 0
+    best_fold = np.where(cvbt_folds_model[0, 0, model_idx, :] == \
+                         max(cvbt_folds_model[0, 0, model_idx, :]))[0][0]
     base_path = overall_dir / (model +'_K_' + str(K)) / ('fold_' + str(best_fold))
-    key_for_dict = model +'_K_' + str(K) + '/fold_' + str(best_fold)
+    if not global_fit:
+        sigma, alpha, _ = get_best_map_params(map_params, animal=animal, fold=best_fold, K=K)
+
+    key_for_dict = model +'_K_' + str(K) + '/fold_' + str(best_fold) \
+                        + '/alpha_' + str(alpha) + '/sigma_' + str(sigma)
     best_iter = best_init_cvbt_dict[key_for_dict]
-    raw_file = base_path / ('iter_' + str(best_iter)) / (fname_header + str(best_iter) + '.npz')
-    return raw_file
+
+    fname_tail = '_a' + str(int(alpha*100)) + '_s' +  str(int(sigma*100)) + '.npz'
+    fpath = base_path / ('iter_' + str(best_iter)) / (fname_header + str(best_iter) + fname_tail)
+    return fpath, best_fold
 
 def load_cv_arr(file):
     container = np.load(file, allow_pickle=True)
@@ -97,8 +99,28 @@ def load_cv_arr(file):
     cvbt_folds_model = data[0]
     return cvbt_folds_model
 
-def load_global_params(global_params_file):
+def load_global_best_params(global_params_file):
     container = np.load(global_params_file, allow_pickle=True)
     data = [container[key] for key in container]
     global_params = data[0]
     return global_params
+
+def load_best_map_params(map_params_file):
+    container = np.load(map_params_file, allow_pickle=True)
+    data = [container[key] for key in container]
+    value = data[0]
+    return value
+
+def get_best_map_params(map_params, animal: str, fold: int, K: int):
+    params_noanimal = map_params[:,0:-1].astype('float32')
+    params_animal = map_params[:,-1]
+
+    idx_K = np.where(params_noanimal[:,2] == K)
+    idx_fold = np.where(params_noanimal[:,3] == fold)
+    idx_animal = np.where(params_animal == animal)
+
+    idx = reduce(np.intersect1d, (idx_K, idx_fold, idx_animal))[0]
+    sigma = params_noanimal[idx, 0]
+    alpha = params_noanimal[idx, 1]
+
+    return sigma, alpha, idx

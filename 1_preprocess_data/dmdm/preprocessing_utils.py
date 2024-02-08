@@ -84,14 +84,20 @@ def get_raw_data(eid, path_to_dataset):
 
 def create_train_test_sessions(session, num_folds=5):
     """
-    Create a session-fold lookup table
+    Create a session-fold lookup table to split training dataset and validation dataset
+    from the entire dataset, as well as training dataset and tuning dataset 
+    from the training dataset. They use the same number of folds.
     """
      
     num_sessions = len(np.unique(session))
     # Map sessions to folds:
-    unshuffled_folds = np.repeat(np.arange(num_folds),
-                                 np.ceil(num_sessions / num_folds))
-    shuffled_folds = npr.permutation(unshuffled_folds)[:num_sessions]
+    unshuffled_folds_1 = np.repeat(np.arange(num_folds),
+                                   int(np.ceil(num_sessions / num_folds)))
+    unshuffled_folds_2 = np.tile(np.arange(num_folds),
+                                 int(np.ceil(num_sessions / num_folds))) # [0,0,0,...]
+    unshuffled_folds = np.vstack([unshuffled_folds_1[:num_sessions], 
+                                  unshuffled_folds_2[:num_sessions]]) # [0,1,2,...]
+    shuffled_folds = npr.permutation(unshuffled_folds.T).T # np.permutation only supports colum-wise permutation
     assert len(np.unique(
         shuffled_folds)) == num_folds, "require at least one session per fold for " \
                                "each animal!"

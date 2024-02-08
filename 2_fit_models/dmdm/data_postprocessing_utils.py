@@ -1,14 +1,7 @@
 # Functions to assist with post-processing of GLM-HMM fits
-import sys
-
 import numpy as np
 import ssm
-
-from data_io import load_glmhmm_data, load_cv_arr, load_glm_vectors, load_lapse_params, get_file_dir
-
-sys.path.append(str(get_file_dir() / '1_fit_glm'))
-from GLM import glm
-
+import matplotlib.pyplot as plt
 
 def partition_data_by_session(inpt, y, mask, session):
     '''
@@ -36,7 +29,7 @@ def partition_data_by_session(inpt, y, mask, session):
         counter += len(idx)
         inputs.append(inpt[idx, :])
         datas.append(y[idx, :])
-        masks.append(mask[idx])
+        masks.append(mask[idx,:])
     assert counter == inpt.shape[0], "not all trials assigned to session!"
     return inputs, datas, masks
 
@@ -46,7 +39,7 @@ def permute_transition_matrix(transition_matrix, permutation):
     return transition_matrix
 
 
-def calculate_state_permutation(hmm_params):
+def calculate_state_permutation(hmm_params, K):
     '''
     If K = 3, calculate the permutation that results in states being ordered
     as engaged/bias left/bias right
@@ -54,10 +47,27 @@ def calculate_state_permutation(hmm_params):
     :param hmm_params:
     :return: permutation
     '''
-    glm_weights = hmm_params[2]
-    K = glm_weights.shape[0]
+    if K == 1:
+        permutation = None
+        weight_vectors = hmm_params
+        log_transition_matrix = np.zeros((1, 1))
+        init_state_dist = np.zeros((1))
 
-    permutation = np.argsort(-glm_weights[:, 0, 0])
+    elif K > 1:
+        glm_weights = hmm_params[2]
+        K = glm_weights.shape[0]
+
+        permutation = np.argsort(-glm_weights[:, 0, 0])
+        assert len(permutation) == K, "permutation is incorrect size"
+        assert check_all_indices_present(permutation, K), "not all indices " \
+                                                        "present in " \
+                                                        "permutation: " \
+                                                        "permutation = " + \
+                                                        str(permutation)
+        weight_vectors = hmm_params[2][permutation]
+        log_transition_matrix = permute_transition_matrix(
+            hmm_params[1][0], permutation)
+        init_state_dist = hmm_params[0][0][permutation]
 
     # if K == 3:
     #     # want states ordered as engaged/bias left/bias right
@@ -106,13 +116,8 @@ def calculate_state_permutation(hmm_params):
     #     # convert to -ve glm_weights)
     #     permutation = np.argsort(-glm_weights[:, 0, 0])
     # assert that all indices are present in permutation exactly once:
-    assert len(permutation) == K, "permutation is incorrect size"
-    assert check_all_indices_present(permutation, K), "not all indices " \
-                                                      "present in " \
-                                                      "permutation: " \
-                                                      "permutation = " + \
-                                                      str(permutation)
-    return permutation
+
+    return init_state_dist, log_transition_matrix, weight_vectors, permutation
 
 
 def check_all_indices_present(permutation, K):
@@ -121,6 +126,40 @@ def check_all_indices_present(permutation, K):
             return False
     return True
 
+def plot_best_MAP_params(averaged_normalized_lls:np.array, 
+                         transition_alpha: list,
+                         prior_sigma: list,
+                         figure_directory,
+                         save_title='map_parameters'):
+    
+    fig = plt.figure(figsize=(len(transition_alpha)*10, len(prior_sigma)*10),
+                        dpi=80,
+                        facecolor='w',
+                        edgecolor='k')
+
+    plt.imshow(averaged_normalized_lls, cmap='hot')
+    for i in range(averaged_normalized_lls.shape[0]):
+        for j in range(averaged_normalized_lls.shape[1]):
+            text = plt.text(j,
+                            i,
+                            np.around(averaged_normalized_lls[i, j],
+                                        decimals=3),
+                            ha="center",
+                            va="center",
+                            color="k",
+                            fontsize=30)
+    plt.ylabel("sigma", fontsize=30)
+    plt.xlabel("alpha", fontsize=30)
+    plt.colorbar()
+    plt.xlim(-0.5, len(transition_alpha) - 0.5)
+    plt.ylim(-0.5, len(prior_sigma) - 0.5)
+    plt.xticks(range(0, len(transition_alpha)), transition_alpha, fontsize=30)
+    plt.yticks(range(0, len(prior_sigma)), prior_sigma, fontsize=30)
+    plt.title("MAP hyperparameters", fontsize=40)
+
+    fig.savefig(figure_directory / (save_title + '.png'))
+    plt.axis('off')
+    plt.close(fig)
 
 def get_marginal_posterior(inputs, datas, masks, C,
                            hmm_params, K, permutation):
@@ -140,4 +179,5 @@ def get_marginal_posterior(inputs, datas, masks, C,
     # Convert this now to one array:
     posterior_probs = np.concatenate(expectations, axis=0)
     posterior_probs = posterior_probs[:, permutation]
+
     return posterior_probs

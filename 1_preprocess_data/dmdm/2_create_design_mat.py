@@ -21,6 +21,9 @@ def main(dname, *, req_num_sessions = 30, num_folds=5):
     :param int req_num_sessions: Required number of sessions for each animal
     :param int num_folds: Number of folds for k-fold cross-validation
     """
+    if req_num_sessions < num_folds:
+        raise ValueError('Required number of sessions must be greater than the number of folds')
+    
     dirname = Path(os.path.dirname(os.path.abspath(__file__)))
     dmdm_data_path =  dirname.parents[1] / "data" / "dmdm" / dname
     processed_dmdm_data_path =  dmdm_data_path / "data_for_cluster"

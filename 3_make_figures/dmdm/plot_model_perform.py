@@ -241,27 +241,56 @@ def plot_state_occupancy(inpt_y, inpt_rt, y, session, rt, stim_onset,
     plt.close(fig)
 
 
-def plot_state_prob(inpt_y, inpt_rt, y, session, rt, stim_onset,
-                         K, hmm_params,
-                         animal_name,
-                         figure_directory,
-                         save_title='best_params_state_occupancy',
-                         cols = ["#7e1e9c", "#0343df", "#15b01a", "#bf77f6", "#95d0fc","#96f97b"]):
-    
-    fig = plt.figure(figsize=(5, 2.5), dpi=80, facecolor='w', edgecolor='k')
-    sess_id = 0 #session id; can choose any index between 0 and num_sess-1
-    for k in range(num_states):
-        plt.plot(posterior_probs[sess_id][:, k], label="State " + str(k + 1), lw=2,
-                color=cols[k])
-    plt.ylim((-0.01, 1.01))
-    plt.yticks([0, 0.5, 1], fontsize = 10)
-    plt.xlabel("trial #", fontsize = 15)
-    plt.ylabel("p(state)", fontsize = 15)
+def plot_FArate(df: pd.DataFrame, ax, label, K=None):
+    """
+    Plot false alarm rate (early lick/press rate)
+    """
 
-def plot_state_dwelltime(inpt_y, inpt_rt, y, session, rt, stim_onset,
-                         K, hmm_params,
-                         animal_name,
-                         figure_directory,
-                         save_title='best_params_state_occupancy',
-                         cols = ["#7e1e9c", "#0343df", "#15b01a", "#bf77f6", "#95d0fc","#96f97b"]):
-    return None
+    if K is None:
+        earlylicks = (df[(df['fitted_trials'] == 1)]
+                    .groupby(['session'])
+                    .agg({'early_report': 'mean'})
+                    .unstack()
+                    )
+    else:
+        earlylicks = (df[(df['fitted_trials'] == 1) & (df['state'] == K)]
+                    .groupby(['session'])
+                    .agg({'early_report': 'mean'})
+                    .unstack()
+                    )
+        
+    earlylicks_mean = earlylicks.mean(axis=0)
+    earlylicks_prc = earlylicks.quantile([0.025, 0.975]) # this gives actual values
+
+    earlylicks_err = np.array([[earlylicks_mean - earlylicks_prc.values[0]], 
+                               [earlylicks_prc.values[1] - earlylicks_mean]])
+
+    ax.errorbar(0, earlylicks_mean, yerr=earlylicks_err, 
+                color='k', marker='o',
+                markersize='2', capsize=2) # this asks for the diff
+
+
+def plot_state_Wk(weight_vectors,
+                  ax):
+
+    assert weight_vectors.ndim == 2, 'weight_vectors has wrong dim!'
+    C = weight_vectors.shape[0]
+    M = weight_vectors.shape[1] - 1
+
+    choice_label_mapping = {0: 'miss', 1: 'Hit', 2: 'FA', 3: 'abort'}
+    for j in range(C): # each category 
+        l = ax.plot(range(M + 1), 
+                      weight_vectors[j,:], # plot weights with orginal signs
+                      marker='o',
+                      markersize='2',
+                      label=choice_label_mapping[j],
+                      lw=2)
+    ax.axhline(y=0, color="k", alpha=0.5, ls="--")
+
+def plot_state_dwelltime(dwell_time_df: pd.DataFrame,
+                         ax,
+                         bins=onp.arange(0, 90, 5)):
+        ax.hist(dwell_time_df.duration.values,
+                 bins=bins,
+                 histtype='bar',
+                 rwidth=0.8)

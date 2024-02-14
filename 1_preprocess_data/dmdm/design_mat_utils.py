@@ -1,7 +1,7 @@
 import numpy as np
 from ssm.util import one_hot
 
-def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard):
+def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard, history=5):
     ''' 
     Create unnormalized input for y: with first column is changesize,
     second column as change onset. third column as previous choice
@@ -20,7 +20,7 @@ def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard):
                                                                 reactiontimes)
     
     # Change size:
-    design_mat = np.zeros((len(stim_updated), 3))
+    design_mat = np.zeros((len(stim_updated), 2+history))
     design_mat[:, 0] = stim_updated # unnormalized
 
     # Change onset:
@@ -28,8 +28,8 @@ def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard):
     # design_mat[:, 1] = hazard
 
     # previous choice vector:
-    prev_choice = create_previous_choice_vector(choice_updated)
-    design_mat[:, 2] = prev_choice
+    prev_choice = create_previous_choice_vector(choice_updated, history=history)
+    design_mat[:, 2:2+history] = prev_choice
 
     continuous_column = [0, 1]
 
@@ -51,30 +51,30 @@ def create_design_mat_rt(stim, outcome, reactiontimes, stimT, hazard):
     outcome_noref = ref2FA(outcome)
 
 
-    choice_updated, stim_updated, stimT_updated, rt_updated = \
+    choice_updated, stim_updated, stimT_updated, rt = \
         remap_vals(outcome_noref, stim, stimT, 
                    reactiontimes, 
                    miss_onset_delay = 0)
     
     # Change size:
-    design_mat = np.zeros((len(stimT), 5))
+    design_mat = np.zeros((len(stimT), 9))
     design_mat[:, 0] = stim_updated # unnormalized
 
     # Change onset:
-    design_mat[:, 1] = stimT_updated # unnormalized
+    design_mat[:, 1] = stimT # unnormalized
 
     # previous choice vector:
-    previous_choice = create_previous_choice_vector(choice_updated)
-    design_mat[:, 2] = previous_choice
+    previous_choice = create_previous_choice_vector(choice_updated, 5)
+    design_mat[:, 2:7] = previous_choice
     # design_mat[:, 4] = rewarded
 
     # previous Change onset
-    previous_stimT = np.hstack([np.array(stimT_updated[0]), stimT_updated])[:-1]
-    design_mat[:, 3] = previous_stimT # unnormalized
+    previous_stimT = np.hstack([np.array(stimT[0]), stimT])[:-1]
+    design_mat[:, 7] = previous_stimT # unnormalized
 
     # previous reactiontimes
-    previous_rt = np.hstack([np.array(rt_updated[0]), rt_updated])[:-1]
-    design_mat[:, 4] = previous_rt # unnormalized
+    previous_rt = np.hstack([np.array(rt[0]), rt])[:-1]
+    design_mat[:, 8] = previous_rt # unnormalized
     # WSLS
 
     # previous_stimT = np.hstack([np.array(stimT_updated[0]), stimT_updated])[:-1]
@@ -85,16 +85,16 @@ def create_design_mat_rt(stim, outcome, reactiontimes, stimT, hazard):
     # design_mat[:, 3] = previous_stimT
     # design_mat[:, 4] = previous_rt
 
-    continuous_column = [0, 1, 3,4]
+    continuous_column = [0, 1, 7, 8]
 
-    return design_mat, rt_updated, stimT_updated, continuous_column
+    return design_mat, rt, stimT, continuous_column
 
-def ref2FA(choice):
+def ref2FA(choice) -> np.array:
     new_choice = choice.copy()
     new_choice[new_choice == 4] = 2 # ref = 4, FA = 2
     return new_choice
 
-def remap_vals(choice, stim, stimT, rt, delay=0.5, miss_onset_delay = 2.15):
+def remap_vals(choice, stim, stimT, rt, delay=0.5, miss_onset_delay = 2.15) -> np.array:
     ''' 
     choice: choice vector of size T. 
             By default, hit = 1, FA = 2, miss = 0, abort = 3
@@ -128,14 +128,16 @@ def remap_vals(choice, stim, stimT, rt, delay=0.5, miss_onset_delay = 2.15):
 
     return choice_updated, stim_updated, stimT_updated, rt_updated
 
-def create_previous_choice_vector(choice):
+def create_previous_choice_vector(choice, history=1) -> np.array:
     # The original choice vectors are
     # hit with changes = 1, FA = 2, miss = 0, abort = 3.
     # We will create a new vector about how deviant animal was performing in the previous trial.
-    previous_choice = np.hstack([np.array(choice[0]), choice])[:-1]
-
     choice_mapping = {1: 0, 2: 1, 0: -1, 3: 1}
-    prev_choice = [choice_mapping[old_choice] for old_choice in previous_choice]
+
+    prev_choice = np.zeros((len(choice), history))
+    for h in range(1, (history+1)):
+        previous_choice = np.hstack([np.repeat(choice[0], h), choice])[0:-h]
+        prev_choice[:,h-1] = [choice_mapping[old_choice] for old_choice in previous_choice]
 
     return prev_choice
 

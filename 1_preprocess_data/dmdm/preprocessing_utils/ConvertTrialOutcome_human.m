@@ -18,7 +18,7 @@ function [new_arr_withabort, new_arr_noabort] = ConvertTrialOutcome_human(struct
         end
     end
 
-    new_arr_withabort = copy(new_arr_noabort);
-    new_arr_withabort(struct.IsAborted) = 3; % replace with abort
+    new_arr_withabort = new_arr_noabort;
+    new_arr_withabort(struct.abort) = 3; % replace with abort
 
 end

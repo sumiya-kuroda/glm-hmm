@@ -5,10 +5,10 @@ import os
 from pathlib import Path
 from design_mat_utils import create_design_mat_y, create_design_mat_rt
 
-def scan_sessions(path):
+def scan_sessions(path, fname_suffix='outcome.npy'):
     matches = []
     for dirpath, _, filenames in os.walk(str(path)):
-        for filename in [f for f in filenames if f.endswith('outcome.npy')]:
+        for filename in [f for f in filenames if f.endswith(fname_suffix)]:
             matches.append(str(Path(dirpath)))
     return matches
 

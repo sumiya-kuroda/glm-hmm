@@ -48,7 +48,7 @@ function convert_BehKuroda(matfile)
             [dmdm_trials.outcome_withabort, ...
                 dmdm_trials.outcome_noabort] = ConvertTrialOutcome_human(fsm);
             writeNPY(dmdm_trials.outcome_withabort, saving_location + animals{k} + ...
-                     '/' + sessions{s} + '/' + '_dmdm_trials.outcome_withabort.npy');
+                     '/' + sessions{s} + '/' + '_dmdm_trials.outcome.npy');
             writeNPY(dmdm_trials.outcome_noabort, saving_location + animals{k} + ...
                      '/' + sessions{s} + '/' + '_dmdm_trials.outcome_noabort.npy');            
             % change size
@@ -57,7 +57,7 @@ function convert_BehKuroda(matfile)
                      '/' + sessions{s} + '/' + '_dmdm_trials.changesize.npy');
 
             % hazard block
-            dmdm_trials.hazardblock = ConvertTrialHazardBlock_human({fsm.hazardblock});
+            dmdm_trials.hazardblock = ConvertTrialHazardBlock_human({fsm.hazard});
             writeNPY(dmdm_trials.hazardblock, saving_location + animals{k} + ...
                      '/' + sessions{s} + '/' + '_dmdm_trials.hazardblock.npy');
 

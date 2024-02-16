@@ -17,7 +17,7 @@ function convert_BehLohse(matfile)
     AllBehav = load(matfile); 
     tmp = fieldnames(AllBehav);
     animals = CellStartWith(tmp, 'x');
-    disp(['Found', numel(animals), ' animals in ', matfile]);
+    disp(['Found ', int2str(numel(animals)), ' animals in ', matfile]);
 
     % Create directory for saving converted data:
     [~,fname] = fileparts(matfile);

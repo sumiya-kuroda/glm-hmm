@@ -15,10 +15,8 @@ function convert_BehKuroda(matfile)
     % This tends to take a while - as behav data is quite large
     disp(['Loading ', matfile, ' ...']);
     AllBehav = load(matfile); 
-
-    AllBehav = load('C:\Users\Sumiya\Workstation2024\HumanTFChangeDetectionAnalysis\data\beh_human\dataAllHumans.mat');
     animals = AllBehav.BehAllSessions.BehAllSessions.pname;
-    disp(['Found', numel(animals), ' animals in ', matfile]);
+    disp(['Found ', int2str(numel(animals)), ' animals in ', matfile]);
 
     % Create directory for saving converted data:
     [~,fname] = fileparts(matfile);

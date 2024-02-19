@@ -74,6 +74,10 @@ class KFoldCV(object):
         '''
 
         y = y.astype('int')
+        if self.global_fit:
+             tuning = 'global_fitting'
+        else:
+             tuning = 'individual_fitting'
 
         print("Retrieving best iter results for model = {}; num_folds = {}".format(str(self.model), str(self.num_folds)))
         for fold in tqdm(range(self.num_folds)):
@@ -116,7 +120,7 @@ class KFoldCV(object):
                                                     ll0, ll0_train,
                                                     n_test, n_train,
                                                     M_y, C, outcome_dict,
-                                                    paramter_tuning=False,
+                                                    tuning=tuning,
                                                     map_params=map_params)
                     
                 else:
@@ -178,7 +182,7 @@ class KFoldCV(object):
                                ll0, ll0_train,
                                n_test, n_train,
                                M_y: int, C: int, outcome_dict = None,
-                               paramter_tuning: bool = False,
+                               tuning: str = '',
                                fold_tuning: int = None,
                                map_params: np.array = None):
 
@@ -204,7 +208,11 @@ class KFoldCV(object):
                     train_session)
 
             for model_idx, K in enumerate(self.K_vals):
-                if not paramter_tuning:
+                if tuning == 'global_fitting':
+                     dir_to_check = self.results_dir / ('GLM_HMM_y_K_' + str(K)) / ('fold_' + str(fold))
+                elif tuning == 'map_tuning':
+                     dir_to_check = self.results_dir / ('GLM_HMM_y_K_' + str(K)) / ('fold_' + str(fold)) / ('tuningfold_' + str(fold_tuning))
+                elif tuning == 'individual_fitting':
                     dir_to_check = self.results_dir / ('GLM_HMM_y_K_' + str(K)) / ('fold_' + str(fold))
                     # Instantiate alpha and signa as well
                     sigma, alpha, _ = get_best_map_params(map_params, animal=self.animal, fold=fold, K=K)
@@ -214,7 +222,7 @@ class KFoldCV(object):
                     if (len(self.Alpha_vals) > 1) or (len(self.Sigma_vals) > 1):
                          raise ValueError('Are you tuning parameters?')
                 else:
-                     dir_to_check = self.results_dir / ('GLM_HMM_y_K_' + str(K)) / ('fold_' + str(fold)) / ('tuningfold_' + str(fold_tuning))
+                     raise NotImplementedError
 
                 for A_idx, alpha in enumerate(self.Alpha_vals):
                     for S_idx, sigma in enumerate(self.Sigma_vals):
@@ -331,7 +339,7 @@ class KFoldCV(object):
                                                         ll0, ll0_train,
                                                         n_test, n_train,
                                                         M_y, C, outcome_dict,
-                                                        paramter_tuning=True,
+                                                        tuning='map_tuning',
                                                         fold_tuning=fold_tuning)
                     
                 else:

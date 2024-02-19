@@ -36,7 +36,7 @@ if [ "$FORMAT" = "Lohse" ]; then
 elif [ "$FORMAT" = "Kuroda" ]; then
   matlab -nodisplay -nosplash -nodesktop -r "cd('$BASE'); \
                                             addpath(genpath('.')); \
-                                            convert_BehKuroda('$INPUT'); \
+                                            convert_BehKuroda('$INPUT', true); \
                                             exit"
 else
   echo "Error: Format $FORMAT not supported"; return;

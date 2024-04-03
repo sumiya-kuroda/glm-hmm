@@ -72,13 +72,18 @@ function convert_BehKuroda(matfile, concat)
                 writeNPY(dmdm_trials.stimT, saving_location + animals{k} + ...
                         '/' + sessions{s} + '/' + '_dmdm_trials.stimT.npy');
 
+                % trial num
+                dmdm_trials.trial = [fsm.trial];
+                writeNPY(dmdm_trials.trial, saving_location + animals{k} + ...
+                        '/' + sessions{s} + '/' + '_dmdm_trials.trial.npy');
+
                 % Future implementation: hazard probe, TF, orientation,
                 % trialtype
             end
 
         end
     else
-        if ~exist(saving_location + 'H_All', 'dir')
+        if ~exist(saving_location + 'HAll', 'dir')
             mkdir(saving_location + 'H_All')
         end
         for k=1:length(animals)
@@ -88,8 +93,8 @@ function convert_BehKuroda(matfile, concat)
 
             for s = 1:length(sessions)
                 clear dmdm_trials
-                if ~exist(saving_location + 'H_All' + '/' + sessions{s}, 'dir')
-                    mkdir(saving_location + 'H_All' + '/' + sessions{s})
+                if ~exist(saving_location + 'HAll' + '/' + sessions{s}, 'dir')
+                    mkdir(saving_location + 'HAll' + '/' + sessions{s})
                 end
                 disp(sessions{s});
 
@@ -98,29 +103,34 @@ function convert_BehKuroda(matfile, concat)
                 % trial outcome
                 [dmdm_trials.outcome_withabort, ...
                     dmdm_trials.outcome_noabort] = ConvertTrialOutcome_human(fsm);
-                writeNPY(dmdm_trials.outcome_withabort, saving_location + 'H_All' + ...
+                writeNPY(dmdm_trials.outcome_withabort, saving_location + 'HAll' + ...
                         '/' + sessions{s} + '/' + '_dmdm_trials.outcome.npy');
-                writeNPY(dmdm_trials.outcome_noabort, saving_location + 'H_All' + ...
+                writeNPY(dmdm_trials.outcome_noabort, saving_location + 'HAll' + ...
                         '/' + sessions{s} + '/' + '_dmdm_trials.outcome_noabort.npy');            
                 % change size
                 dmdm_trials.changesize = log2([fsm.Stim2TF]);
-                writeNPY(dmdm_trials.changesize, saving_location + 'H_All' + ...
+                writeNPY(dmdm_trials.changesize, saving_location + 'HAll' + ...
                         '/' + sessions{s} + '/' + '_dmdm_trials.changesize.npy');
 
                 % hazard block
                 dmdm_trials.hazardblock = ConvertTrialHazardBlock_human({fsm.hazard});
-                writeNPY(dmdm_trials.hazardblock, saving_location + 'H_All' + ...
+                writeNPY(dmdm_trials.hazardblock, saving_location + 'HAll' + ...
                         '/' + sessions{s} + '/' + '_dmdm_trials.hazardblock.npy');
 
                 % reaction time
                 dmdm_trials.reactiontimes = [fsm.RTbaseline];
-                writeNPY(dmdm_trials.reactiontimes, saving_location + 'H_All' + ...
+                writeNPY(dmdm_trials.reactiontimes, saving_location + 'HAll' + ...
                         '/' + sessions{s} + '/' + '_dmdm_trials.reactiontimes.npy');
 
                 % change onset
                 dmdm_trials.stimT = [fsm.stimT];
-                writeNPY(dmdm_trials.stimT, saving_location + 'HA_ll' + ...
+                writeNPY(dmdm_trials.stimT, saving_location + 'HAll' + ...
                         '/' + sessions{s} + '/' + '_dmdm_trials.stimT.npy');
+
+                % trial num
+                dmdm_trials.trial = [fsm.trial];
+                writeNPY(dmdm_trials.trial, saving_location + 'HAll' + ...
+                        '/' + sessions{s} + '/' + '_dmdm_trials.trial.npy');
             end
         end
     end

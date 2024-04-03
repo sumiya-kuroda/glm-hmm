@@ -139,7 +139,8 @@ def main(dname, *, req_num_sessions = 30, num_folds=5):
         master_session, master_rt, master_stim_onset)
     np.savez(
         processed_dmdm_data_path / 'all_animals_concat_unnormalized.npz',
-        master_y_inpt, master_y, master_session, master_rt, master_stim_onset)
+        master_y_inpt, master_rt_inpt, master_y, 
+        master_session, master_rt, master_stim_onset)
     np.savez(
         processed_dmdm_data_path / 'all_animals_concat_session_fold_lookup.npz',
         master_session_fold_lookup_table)

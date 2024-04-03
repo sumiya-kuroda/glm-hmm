@@ -1,4 +1,4 @@
-function convert_BehKhilkevichLohseTraining(matfile)
+function convert_BehKhilkevichLohseTraining(matfile, concat)
 % CONVERT_BEHKURODA  Convert Khilkevich and Lohse's training behavior data 
 %                    in an Ashwood's GLM-HMM-friendly format
 %
@@ -77,6 +77,11 @@ function convert_BehKhilkevichLohseTraining(matfile)
                 dmdm_trials.stimT = [fsm.stimT];
                 writeNPY(dmdm_trials.stimT, saving_location + animals{k} + ...
                         '/' + sessions{s} + '/' + '_dmdm_trials.stimT.npy');
+
+                % trial num
+                dmdm_trials.trial = [fsm.trial];
+                writeNPY(dmdm_trials.trial, saving_location + animals{k} + ...
+                        '/' + sessions{s} + '/' + '_dmdm_trials.trial.npy');
             end
         end
     else
@@ -122,6 +127,11 @@ function convert_BehKhilkevichLohseTraining(matfile)
                 dmdm_trials.stimT = [fsm.stimT];
                 writeNPY(dmdm_trials.stimT, saving_location + 'M_All' + ...
                         '/' + sessions{s} + '/' + '_dmdm_trials.stimT.npy');
+
+                % trial num
+                dmdm_trials.trial = [fsm.trial];
+                writeNPY(dmdm_trials.trial, saving_location + 'M_All' + ...
+                        '/' + sessions{s} + '/' + '_dmdm_trials.trial.npy');
             end
         end
     end

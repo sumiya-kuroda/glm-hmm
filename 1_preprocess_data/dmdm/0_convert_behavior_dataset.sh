@@ -33,6 +33,11 @@ if [ "$FORMAT" = "Lohse" ]; then
                                             addpath(genpath('.')); \
                                             convert_BehLohse('$INPUT'); \
                                             exit"
+elif [ "$FORMAT" = "KhilkevichLohseTraining" ]; then
+  matlab -nodisplay -nosplash -nodesktop -r "cd('$BASE'); \
+                                            addpath(genpath('.')); \
+                                            convert_BehKhilkevichLohseTraining('$INPUT', false); \
+                                            exit"
 elif [ "$FORMAT" = "Kuroda" ]; then
   matlab -nodisplay -nosplash -nodesktop -r "cd('$BASE'); \
                                             addpath(genpath('.')); \

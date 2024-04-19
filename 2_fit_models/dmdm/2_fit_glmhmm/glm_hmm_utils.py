@@ -6,7 +6,7 @@ import numpy as onp
 
 def fit_glm_hmm(datas, inputs, masks, K, D, M, C, N_em_iters,
                 transition_alpha, prior_sigma, global_fit,
-                params_for_initialization, save_title) -> None:
+                reguralization, l, params_for_initialization, save_title) -> None:
     '''
     Instantiate and fit GLM-HMM model
     :param datas:
@@ -77,8 +77,8 @@ def fit_glm_hmm(datas, inputs, masks, K, D, M, C, N_em_iters,
     else:
         raise ValueError('K should be >= 1')
     
-    file_header = '_a' + str(int(transition_alpha*100)) + '_s' +  str(int(prior_sigma*100))
+    file_header = '_a' + str(int(transition_alpha*100)) + '_s' +  str(int(prior_sigma*100)) + '_l' +  str(int(l*100))
     np.savez(str(save_title) + file_header + '.npz', 
-             recovered_params, lls, transition_alpha, prior_sigma, global_fit)
+             recovered_params, lls, transition_alpha, prior_sigma, global_fit, l, reguralization)
 
     return None

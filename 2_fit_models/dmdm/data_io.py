@@ -39,7 +39,7 @@ def load_glm_vectors(glm_vectors_file):
     recovered_weights = data[1]
     return loglikelihood_train, recovered_weights
 
-def load_glmhmm_data(glmhmm_output):
+def load_glmhmm_data(glmhmm_output, IsRegularization=False):
     # load hmm output files
     container = np.load(glmhmm_output, allow_pickle=True)
     data = [container[key] for key in container]
@@ -48,7 +48,15 @@ def load_glmhmm_data(glmhmm_output):
     alpha = data[2]
     sigma = data[3]
     global_fit = data[4]
-    return this_hmm_params, lls, alpha, sigma, global_fit
+    if IsRegularization:
+        sigma = data[3]
+        global_fit = data[4]
+        l = data[5]
+        regulization = data[6]
+
+        return this_hmm_params, lls, alpha, sigma, global_fit, l, regulization
+    else:
+        return this_hmm_params, lls, alpha, sigma, global_fit
 
 def scan_glmhmm_output(path, fname_header=''):
     matched_iter = []
@@ -93,6 +101,59 @@ def get_file_name_for_best_glmhmm_fold(cvbt_folds_model, model_idx, K,
     fpath = base_path / ('iter_' + str(best_iter)) / (fname_header + str(best_iter) + fname_tail)
     return fpath, best_fold
 
+def get_file_name_for_best_glmhmm_fold_l2(cvbt_folds_model, model_idx, K, 
+                                        alpha_idx=None, alpha=None, sigma_idx=None, sigma=None, overall_dir: Path = None,
+                                        best_init_cvbt_dict=None, model=None, fname_header=None,
+                                        global_fit=True, map_params=None, animal=None,
+                                        lambda_value=None):
+    '''
+    Get the file name for the best initialization for the K value specified
+    :param cvbt_folds_model:
+    :param K:
+    :param models:
+    :param overall_dir:
+    :param best_init_cvbt_dict:
+    :return:
+    '''
+    # Identify best fold for best model:
+    # loc_best = K - 1
+    # loc_best = 0
+    best_fold = np.where(cvbt_folds_model[0, model_idx, :] == \
+                         max(cvbt_folds_model[0, model_idx, :]))[0][0]
+    base_path = overall_dir / (model +'_K_' + str(K)) / ('fold_' + str(best_fold))
+    if map_params is not None:
+        lambda_value, _ = get_best_l2_params(map_params, animal='global', fold=best_fold, K=K)
+
+    key_for_dict = model +'_K_' + str(K) + '/fold_' + str(best_fold) \
+        + '/alpha_' + str(alpha) + '/sigma_' + str(sigma) \
+            + '/lambda_' + str(lambda_value) + '/fold_tuning_' + str(best_fold) 
+    best_iter = best_init_cvbt_dict[key_for_dict]
+
+    fname_tail = '_a' + str(int(alpha*100)) + '_s' +  str(int(sigma*100)) + '_l' +  str(int(lambda_value*100)) + '.npz'
+    fpath = base_path / (fname_header + str(best_iter) + fname_tail)
+    # fpath = base_path / ('iter_' + str(best_iter)) / (fname_header + str(best_iter) + fname_tail)
+    return fpath, best_fold
+
+def get_file_name_for_best_glmhmm_iter(K, 
+                                        overall_dir,
+                                        best_init_cvbt_dict=None, model=None, fname_header=None,
+                                        global_fit=True, num_fold = 5):
+
+    fpaths = []
+    for fold in range(num_fold):
+        base_path = overall_dir / (model +'_K_' + str(K)) / ('fold_' + str(fold))
+        if global_fit:
+            alpha = 1
+            sigma = 100
+
+        key_for_dict = model +'_K_' + str(K) + '/fold_' + str(fold) \
+                            + '/alpha_' + str(alpha) + '/sigma_' + str(sigma)
+        best_iter = best_init_cvbt_dict[key_for_dict]
+
+        fname_tail = '_a' + str(int(alpha*100)) + '_s' +  str(int(sigma*100)) + '.npz'
+        fpath = base_path / ('iter_' + str(best_iter)) / (fname_header + str(best_iter) + fname_tail)
+        fpaths.append(fpath)
+    return fpaths
 def load_cv_arr(file):
     container = np.load(file, allow_pickle=True)
     data = [container[key] for key in container]
@@ -124,3 +185,19 @@ def get_best_map_params(map_params, animal: str, fold: int, K: int):
     alpha = params_noanimal[idx, 1]
 
     return sigma, alpha, idx
+
+def get_best_l2_params(map_params, animal: str, fold: int, K: int):
+    params_noanimal = map_params.astype('int32')
+    # params_animal = map_params[:,-1]
+
+    idx_K = np.where(params_noanimal[:,1] == K)
+    idx_fold = np.where(params_noanimal[:,2] == fold)
+    if animal == 'global' :
+        idx = reduce(np.intersect1d, (idx_K, idx_fold))[0]
+    else:
+        pass
+        # idx_animal = np.where(params_animal == animal)
+        # idx = reduce(np.intersect1d, (idx_K, idx_fold, idx_animal))[0]
+    lambda_value = params_noanimal[idx, 0]
+
+    return lambda_value, idx

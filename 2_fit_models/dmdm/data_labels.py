@@ -75,8 +75,11 @@ def partition_data_by_session_L2(inpt, y, mask, session, penalization_factor):
         L2_input = np.concatenate((raw_inpt,penal_array),axis=0).astype(np.int)
         inputs.append(L2_input)
 
-        L2_data = np.concatenate((y[idx, :], np.zeros((M,1)))).astype(np.int)
+        # L2_data = np.concatenate((y[idx, :], np.zeros((M,1)))).astype(np.int)
+        # datas.append(L2_data)
+        L2_data = np.concatenate((y[idx, :], np.full((M, 1), -1))).astype(np.int)
         datas.append(L2_data)
+        # datas.append(y[idx, :])
 
         L2_mask = np.concatenate((mask[idx, :], np.ones((M,1)))).astype(np.int)
         masks.append(L2_mask)

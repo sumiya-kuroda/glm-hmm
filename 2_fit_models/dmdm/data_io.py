@@ -130,7 +130,7 @@ def get_file_name_for_best_glmhmm_fold_l2(cvbt_folds_model, model_idx, K,
     best_iter = best_init_cvbt_dict[key_for_dict]
 
     fname_tail = '_a' + str(int(alpha*100)) + '_s' +  str(int(sigma*100)) + '_l' +  str(int(lambda_value*100)) + '.npz'
-    fpath = base_path / (fname_header + str(best_iter) + fname_tail)
+    fpath = base_path / ('iter_' + str(best_iter)) / (fname_header + str(best_iter) + fname_tail)
     # fpath = base_path / ('iter_' + str(best_iter)) / (fname_header + str(best_iter) + fname_tail)
     return fpath, best_fold
 

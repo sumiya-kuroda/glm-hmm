@@ -72,6 +72,52 @@ def calc_dwell_time(df: pd.DataFrame) -> pd.DataFrame:
 
     return dwell_across_sessions
 
+def load_global_glmhmm_result(K, model, data_dir, regularization=None):
+
+    if K == 1:
+        raise ValueError('K needs to be > 1')
+    
+    if regularization is None:
+        glmhmm_directory = data_dir / "best_global_params"
+    elif regularization == 'L2':
+        glmhmm_directory = data_dir / "best_global_params_L2"
+    else:
+        raise NotImplementedError
+
+    container = np.load(glmhmm_directory / ('best_params_' + model + '_K_' + str(K) + '.npz'), 
+                        allow_pickle=True)
+    data = [container[key] for key in container]
+    params = data[0]
+    hmm_params = params # np.array([params[0][0], params[1][0], params[2][0]])
+
+    animal_file = data_dir / 'all_animals_concat.npz'
+    session_fold_lookup_table = load_session_fold_lookup(
+        data_dir / 'all_animals_concat_session_fold_lookup.npz')
+
+    inpt_y, inpt_rt, y, session, rt, stim_onset = load_data(animal_file)
+
+    inpt_y = np.hstack((inpt_y, np.ones((len(inpt_y),1))))
+    y = y.astype('int')
+    abort_idx = np.where(y == 3)[0]
+    nonviolation_idx, mask = create_abort_mask(abort_idx, inpt_y.shape[0])
+    y[np.where(y == 3), :] = 2
+    inputs, datas, masks = partition_data_by_session(
+        inpt_y, y, mask, session)
+
+    C = hmm_params[2].shape[1] 
+    posterior_probs = get_marginal_posterior(inputs, datas, masks, C,
+                                                hmm_params, K, range(K))
+    states_max_posterior = np.argmax(posterior_probs, axis=1)
+
+    return states_max_posterior, inpt_y, inpt_rt, y, session, rt, stim_onset, mask, hmm_params
+
+def flatten_list(list):
+    return [item for sublist in list for item in sublist]
+
+
+
+
+
 def load_lapse_params(lapse_file):
     container = np.load(lapse_file, allow_pickle=True)
     data = [container[key] for key in container]

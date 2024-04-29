@@ -37,6 +37,34 @@ def create_cv_frame_for_plotting(cvbt_folds_model):
 
     return data_for_plotting_df, loc_best_K, val_best_K
 
+
+def create_cv_frame_for_plotting_l2(cvbt_folds_model):
+    """
+    Very similar to data_io.get_file_name_for_best_glmhmm_fold
+    But the aim here is to get the dataframe instead of the file name.
+    If we know alpha and sigma, and state K, we should be able to retrieve the
+    best loglikelihood and which fold has that best loglikelihood again.
+    """
+    assert cvbt_folds_model.ndim == 3, 'Wrong shape of cvbt_folds_model'
+    cvbt_folds_model_tuned = cvbt_folds_model[0,:,:]
+    assert cvbt_folds_model_tuned.ndim == 2, 'Shape of cvbt_folds_model wrongly processed'
+    # Identify best cvbt:
+    mean_cvbt = onp.mean(cvbt_folds_model_tuned, axis=1)
+    loc_best_K = onp.where(mean_cvbt == max(mean_cvbt))[0]
+    val_best_K = max(mean_cvbt)
+    # Create dataframe for plotting
+    num_models = cvbt_folds_model_tuned.shape[0]
+    num_folds = cvbt_folds_model_tuned.shape[1]
+    # Create pandas dataframe:
+    data_for_plotting_df = pd.DataFrame({
+        'model':
+            onp.repeat(onp.arange(num_models), num_folds),
+        'cv_bit_trial':
+            cvbt_folds_model_tuned.flatten()
+    })
+
+    return data_for_plotting_df, loc_best_K, val_best_K
+
 def get_file_name_for_best_glmhmm_fold(cvbt_folds_model, model_idx, K, 
                                         alpha_idx, alpha, sigma_idx, sigma, overall_dir: Path,
                                         best_init_cvbt_dict, model, fname_header):
@@ -146,6 +174,7 @@ def plot_model_comparison(cv,
                           global_fit,
                           K_vals,
                           figure_directory,
+                          y_label="Normalized LL",
                           save_title='best_params_performance',
                           cols = ["#7e1e9c", "#0343df", "#15b01a", "#bf77f6", "#95d0fc","#96f97b"]):
 
@@ -162,6 +191,7 @@ def plot_model_comparison(cv,
     g = sns.lineplot(data_for_plotting_df['model'],
         data_for_plotting_df['cv_bit_trial'],
         err_style="bars",
+        errorbar=('se', 1.96),
         mew=0,
         color=cols[0],
         marker='o',
@@ -173,6 +203,7 @@ def plot_model_comparison(cv,
         train_data_for_plotting_df['model'],
         train_data_for_plotting_df['cv_bit_trial'],
         err_style="bars",
+        errorbar=('se', 1.96),
         mew=0,
         color=cols[1],
         marker='o',
@@ -181,7 +212,66 @@ def plot_model_comparison(cv,
         alpha=1,
         lw=4)
     plt.xlabel("Model", fontsize=30)
-    plt.ylabel("Normalized LL", fontsize=30)
+    plt.ylabel(y_label, fontsize=30)
+    plt.xticks(range(len(K_vals)),
+                [str(k) + ' states' for k in K_vals],
+                rotation=45,
+                fontsize=24)
+    plt.yticks(fontsize=15)
+    plt.legend(loc='upper right', fontsize=30)
+    plt.tick_params(axis='y')
+    # plt.yticks([0.2, 0.3, 0.4, 0.5], fontsize=30)
+    # plt.ylim((0.2, 0.55))
+    plt.title("Model Comparison", fontsize=40)
+
+    fig.savefig(figure_directory / (save_title + '.png'))
+    plt.axis('off')
+    plt.close(fig)
+
+def plot_model_comparison_l2(cv,
+                          cv_train,
+                          global_fit,
+                          K_vals,
+                          figure_directory,
+                          y_label="Normalized LL",
+                          save_title='best_params_performance',
+                          cols = ["#7e1e9c", "#0343df", "#15b01a", "#bf77f6", "#95d0fc","#96f97b"]):
+
+    data_for_plotting_df, loc_best, best_val = \
+        create_cv_frame_for_plotting_l2(cv)
+    train_data_for_plotting_df, train_loc_best, train_best_val, \
+          = create_cv_frame_for_plotting_l2(cv_train)
+    
+    fig = plt.figure(figsize=(10, 10),
+                        dpi=80,
+                        facecolor='w',
+                        edgecolor='k')
+
+    g = sns.lineplot(x=data_for_plotting_df['model'],
+        y=data_for_plotting_df['cv_bit_trial'],
+        err_style="bars",
+        errorbar=('se', 1.96),
+        mew=0,
+        color=cols[0],
+        marker='o',
+        ci=68,
+        label="test",
+        alpha=1,
+        lw=4)
+    sns.lineplot(
+        x=train_data_for_plotting_df['model'],
+        y=train_data_for_plotting_df['cv_bit_trial'],
+        err_style="bars",
+        errorbar=('se', 1.96),
+        mew=0,
+        color=cols[1],
+        marker='o',
+        ci=68,
+        label="train",
+        alpha=1,
+        lw=4)
+    plt.xlabel("Model", fontsize=30)
+    plt.ylabel(y_label, fontsize=30)
     plt.xticks(range(len(K_vals)),
                 [str(k) + ' states' for k in K_vals],
                 rotation=45,
@@ -287,6 +377,35 @@ def plot_state_Wk(weight_vectors,
                       lw=2)
     ax.axhline(y=0, color="k", alpha=0.5, ls="--")
 
+def plot_state_Wk_diff(weight_vectors,
+                  ax):
+
+    assert weight_vectors.ndim == 2, 'weight_vectors has wrong dim!'
+    C = weight_vectors.shape[0]
+    M = weight_vectors.shape[1] - 1
+
+    choice_label_mapping = {0: 'miss', 1: 'Hit', 2: 'FA', 3: 'abort'}
+    l = ax.plot(range(M + 1), 
+                    weight_vectors[1,:] - weight_vectors[0,:], # plot weights with orginal signs
+                    marker='o',
+                    markersize='2',
+                    label="hit - miss",
+                    lw=2)
+    l = ax.plot(range(M + 1), 
+                    weight_vectors[2,:] - weight_vectors[1,:], # plot weights with orginal signs
+                    marker='o',
+                    markersize='2',
+                    label="FA - hit",
+                    lw=2)
+    l = ax.plot(range(M + 1), 
+                    weight_vectors[2,:] - weight_vectors[0,:], # plot weights with orginal signs
+                    marker='o',
+                    markersize='2',
+                    label="FA - miss",
+                    lw=2)
+    ax.axhline(y=0, color="k", alpha=0.5, ls="--")
+
+
 def plot_state_dwelltime(dwell_time_df: pd.DataFrame,
                          ax,
                          bins=onp.arange(0, 90, 5)):
@@ -294,3 +413,37 @@ def plot_state_dwelltime(dwell_time_df: pd.DataFrame,
                  bins=bins,
                  histtype='bar',
                  rwidth=0.8)
+    
+def calculate_predictive_accuracy(this_inputs, this_datas, this_masks, this_hmm, 
+                                   y, idx_to_include):
+
+    # Get expected states:
+    expectations = [
+    this_hmm.expected_states(data=data,
+                            input=input,
+                            mask=mask)[0]
+    for data, input, mask in zip(this_datas, this_inputs, this_masks)
+    ]
+    # Convert this now to one array:
+    posterior_probs = onp.concatenate(expectations, axis=0)
+
+    prob_choices = [
+    onp.exp(this_hmm.observations.calculate_logits(input=input))
+    for data, input, mask in zip(this_datas, this_inputs, this_masks)
+    ]
+    prob_choices = onp.concatenate(prob_choices, axis=0)
+
+    final_prob_0 = onp.sum(onp.multiply(posterior_probs, prob_choices[:, :, 0]), axis=1)
+    final_prob_1 = onp.sum(onp.multiply(posterior_probs, prob_choices[:, :, 1]), axis=1)
+    final_prob_2 = onp.sum(onp.multiply(posterior_probs, prob_choices[:, :, 2]), axis=1)
+
+    predicted_label_0 = onp.around(final_prob_0, decimals=0).astype('int')
+    predicted_label_1 = onp.around(final_prob_1, decimals=0).astype('int')
+    predicted_label_2 = onp.around(final_prob_2, decimals=0).astype('int')
+
+    predicted_label = onp.add(predicted_label_1, predicted_label_2*2)
+    # Examine at appropriate idx
+    predictive_acc = onp.sum(
+    y[idx_to_include,
+    0] == predicted_label[idx_to_include]) / len(idx_to_include)
+    return predictive_acc

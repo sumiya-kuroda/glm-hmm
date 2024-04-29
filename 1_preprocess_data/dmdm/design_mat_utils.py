@@ -57,24 +57,24 @@ def create_design_mat_rt(stim, outcome, reactiontimes, stimT, hazard):
                    miss_onset_delay = 0)
     
     # Change size:
-    design_mat = np.zeros((len(stimT), 9))
+    design_mat = np.zeros((len(stimT), 3))
     design_mat[:, 0] = stim_updated # unnormalized
 
     # Change onset:
     design_mat[:, 1] = stimT # unnormalized
 
     # previous choice vector:
-    previous_choice = create_previous_choice_vector(choice_updated, 5)
-    design_mat[:, 2:7] = previous_choice
+    # previous_choice = create_previous_choice_vector(choice_updated, 5)
+    # design_mat[:, 2:7] = previous_choice
     # design_mat[:, 4] = rewarded
 
     # previous Change onset
-    previous_stimT = np.hstack([np.array(stimT[0]), stimT])[:-1]
-    design_mat[:, 7] = previous_stimT # unnormalized
+    # previous_stimT = np.hstack([np.array(stimT[0]), stimT])[:-1]
+    # design_mat[:, 7] = previous_stimT # unnormalized
 
     # previous reactiontimes
     previous_rt = np.hstack([np.array(rt[0]), rt])[:-1]
-    design_mat[:, 8] = previous_rt # unnormalized
+    design_mat[:, 2] = previous_rt # unnormalized
     # WSLS
 
     # previous_stimT = np.hstack([np.array(stimT_updated[0]), stimT_updated])[:-1]
@@ -85,7 +85,7 @@ def create_design_mat_rt(stim, outcome, reactiontimes, stimT, hazard):
     # design_mat[:, 3] = previous_stimT
     # design_mat[:, 4] = previous_rt
 
-    continuous_column = [0, 1, 7, 8]
+    continuous_column = [0, 1, 2]
 
     return design_mat, rt, stimT, continuous_column
 

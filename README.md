@@ -29,11 +29,12 @@ pip install -e .
 ```
 
 ## Getting started
-When you ssh to the HPC, you will first enter the login node. No computation-heavy analysis should be done on this node. We use Jupyter and `dask` to get the advantage of HPC ([Best Practices](https://github.com/pierreglaser/hpc-tutorial)). But you can also play around with it. Here is what I do:
+When you ssh to the HPC, you will first enter the login node. No computation-heavy analysis should be done on this node. Here is what I usually do: I run a shell script that contains something like
 ```sh
 srun --job-name=jupyter -p gpu --gres=gpu:1 --mem=32G -n 4 --pty bash -l
 ```
-This will let you login to a compute node. Then, activate the conda environment by the command below. (This will also load Matlab needed for some preprocessing.)
+This will let you login to a compute node, and this node basically become my "server node". I personally use VSCode, so I attach my VS code to this server node. You can always check the status of all the nodes you are using with `squeue -u ${swc_user_name}`.
+Then, activate the conda environment by the command below. (This will also load Matlab needed for some preprocessing.)
  ```sh
  module load miniconda
  module load matlab
@@ -41,16 +42,7 @@ This will let you login to a compute node. Then, activate the conda environment 
  conda activate glmhmm
 ```
 
-Launch Jupyter as
-```sh
-export XDG_RUNTIME_DIR="" # See https://swc-neuro.slack.com/archives/CHLGTQVLL/p1560422985006700
-jupyter lab --port=2025
-```
-Following [this procedure](https://github.com/pierreglaser/jupyter-slurm-setup-instructions) will make you able to connect to the Jupter notebook on HPC with [`http://127.0.0.1:2025/lab`](http://127.0.0.1:2024/lab) using your web browser. I personally use VSCode, so I will simply run this command below from another HPC terminal to port forwarding ([ref](https://swc-neuro.slack.com/archives/C0116D5V7SA/p1645618426952349)).
-```sh
-ssh -q -N ${jupyter_host_name} -L 2025:localhost:2025
-``` 
-I then follow [this step](https://github.com/microsoft/vscode-jupyter/discussions/13145) and simply copy and paste the jupyter URL within HPC. We will only use Jupyter when we run GLMs and GLM-HMMs on preprocessed data. The first prerpocessing step does not require Jupyter, and you can simply run on a decent computing node. (Again, not login node!)
+We use `Jupyter` and `dask` to get the advantage of HPC ([Best Practices](https://github.com/pierreglaser/hpc-tutorial)). But you can also play around with it. VS code can automatically identify the conda environment, but if this is your first time, you have to let it know where the conda environemnt is. Follow the step described [here](https://www.mk-tech20.com/vscode-conda/). We will only use Jupyter when we run GLMs and GLM-HMMs on preprocessed data. The first prerpocessing step does not require Jupyter, and you can simply run on a decent computing node. (Again, not login node!)
 
 ## Run GLM-HMM
 Code is ordered so that the dataset is preprocessed into the desired format and fitting parameters are efficiently initialized. 
@@ -82,8 +74,17 @@ This creates `figures` folder. Assuming that you have downloaded and preprocesse
 
 ## Troubleshooting
 - To create symbolic link `ln -s ../ssm ssm`
-- Cannot find the kernel? See [here](https://www.mk-tech20.com/vscode-conda/)
 - You want to improve your dask user experience? Check [this JupyterLab extension](https://github.com/dask/dask-labextension) and [this VSCode extension](https://marketplace.visualstudio.com/items?itemName=joyceerhl.vscode-dask).
 - .mat file is in v7.3? You can use [this python module](https://github.com/skjerns/mat7.3) to load, but I found this is extremely slow for the size of .mat file we have.
 - Python is [here](/nfs/nhome/live/skuroda/.conda/envs/glmhmm/bin/python3.7). VSCode asks you to specify the path to it.
 - When using HPC, you need to allocate the computing resources for your analysis. This is not easy-to-solve problem, as there is not inifinite amount of resources on HPC and your jobs can keep pending if you try to use a lot of resources on busy period. Additionally, when I assigned 1 process / 2 cores CPU to each worker, I started to receive `distributed.utils_perf - WARNING - full garbage collections took 11% CPU time recently (threshold: 10%)t]`, which I need to explore the cause at some point (Perhaps my code is not optimizd for this type of usage?).
+- Alternatively, you can launch Jupyter server using a different computing node. This is quite useful especially your notebook uses quite a lot of resources and not using Dask to parallelize it. Here is how to do: Login into a separate computing node with `srun` and launch Jupyter as
+```sh
+export XDG_RUNTIME_DIR="" # See https://swc-neuro.slack.com/archives/CHLGTQVLL/p1560422985006700
+jupyter lab --port=2025
+```
+Following [this procedure](https://github.com/pierreglaser/jupyter-slurm-setup-instructions) will make you able to connect to the Jupter notebook on HPC with [`http://127.0.0.1:2025/lab`](http://127.0.0.1:2024/lab) using your web browser. I personally use VSCode, so I will simply run this command below from another HPC terminal to port forwarding ([ref](https://swc-neuro.slack.com/archives/C0116D5V7SA/p1645618426952349)).
+```sh
+ssh -q -N ${jupyter_host_name} -L 2025:localhost:2025
+``` 
+I then follow [this step](https://github.com/microsoft/vscode-jupyter/discussions/13145) and simply copy and paste the jupyter URL within HPC. 

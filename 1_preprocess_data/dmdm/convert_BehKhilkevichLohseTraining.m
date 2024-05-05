@@ -58,6 +58,7 @@ function convert_BehKhilkevichLohseTraining(matfile, concat)
                          '/' + sessions{s} + '/' + '_dmdm_trials.outcome.npy');   
     
                 % change size
+                % dmdm_trials.changesize = [fsm.Stim2TF];
                 dmdm_trials.changesize = log2([fsm.Stim2TF]);
                 writeNPY(dmdm_trials.changesize, saving_location + animals{k} + ...
                         '/' + sessions{s} + '/' + '_dmdm_trials.changesize.npy');

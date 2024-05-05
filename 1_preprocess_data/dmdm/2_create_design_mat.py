@@ -131,7 +131,10 @@ def main(dname, *, req_num_sessions = 30, num_folds=5):
     normalized_rt_inpt = np.copy(master_rt_inpt)
     for i, mat in enumerate([normalized_y_inpt, normalized_rt_inpt]):
         for c in needs_to_be_normalized[i]:
+            # z-score
             mat[:, c] = preprocessing.scale(mat[:, c], with_mean=False)
+            # min-max
+            # mat[:, c] = preprocessing.minmax_scale(mat[:, c])
     
     np.savez(
         processed_dmdm_data_path / 'all_animals_concat.npz',

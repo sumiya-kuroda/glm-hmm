@@ -227,6 +227,8 @@ class KFoldCV(object):
             for model_idx, K in enumerate(self.K_vals):
                 if tuning == 'global_fitting':
                     dir_to_check = self.results_dir / ('GLM_HMM_y_K_' + str(K)) / ('fold_' + str(fold))
+                elif tuning == 'global_fitting_reg':
+                    dir_to_check = self.results_dir / ('GLM_HMM_y_K_' + str(K)) / ('fold_' + str(fold))
                     # Instantiate alpha and signa as well
                     lambda_value, _ = get_best_l2_params(map_params, animal='global', fold=fold, K=K)
                     self.Lambda_vals = [lambda_value]    
@@ -244,7 +246,7 @@ class KFoldCV(object):
                 else:
                      raise NotImplementedError
 
-                if tuning == 'l2_tuning' or tuning == 'global_fitting':
+                if tuning == 'l2_tuning' or tuning == 'global_fitting_reg':
                     sigma = self.Sigma_vals[0]
                     alpha = self.Alpha_vals[0]
                     for L_idx, lambda_value in enumerate(self.Lambda_vals):

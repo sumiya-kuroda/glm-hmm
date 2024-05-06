@@ -27,21 +27,23 @@ def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard, history=5):
     # Change size:
     design_mat = np.zeros((len(stim_updated_onecolumn), 5))
     design_mat[:, 0] = stim_updated_onecolumn # unnormalized
+    # design_mat = np.zeros((len(choice_updated), 7))
+    # design_mat[:, 0:4] = stim_updated[:,2:] # unnormalized
+
 
     # Change onset:
     # design_mat[:, 1] = stimT # unnormalized
-    arr = one_hot(hazard,2)
+    # arr[arr == 0] = -1
+    design_mat[:, 1] = hazard
     # arr[arr == 0] = -1
     # design_mat[:, 1:3] = arr
 
     # previous choice vector:
     previous_choice = np.hstack([np.repeat(outcome_noref[0], 1), outcome_noref])[0:-1]
     # create_previous_choice_vector_v2(outcome_noref, history=1)[0]
-    design_mat[:, 1:4] = one_hot(previous_choice,4)[:,:-1] # no abort
+    design_mat[:, 2:5] = one_hot(previous_choice,4)[:,:-1] # no abort
 
-    design_mat[:, 4] = hazard
-
-    continuous_column = [0]
+    continuous_column = [] # [0]
 
     return design_mat, outcome_noref, continuous_column
 

@@ -188,8 +188,8 @@ def plot_model_comparison(cv,
                         facecolor='w',
                         edgecolor='k')
 
-    g = sns.lineplot(data_for_plotting_df['model'],
-        data_for_plotting_df['cv_bit_trial'],
+    g = sns.lineplot(x=data_for_plotting_df['model'],
+        y=data_for_plotting_df['cv_bit_trial'],
         err_style="bars",
         errorbar=('se', 1.96),
         mew=0,
@@ -200,8 +200,8 @@ def plot_model_comparison(cv,
         alpha=1,
         lw=4)
     sns.lineplot(
-        train_data_for_plotting_df['model'],
-        train_data_for_plotting_df['cv_bit_trial'],
+        x=train_data_for_plotting_df['model'],
+        y=train_data_for_plotting_df['cv_bit_trial'],
         err_style="bars",
         errorbar=('se', 1.96),
         mew=0,

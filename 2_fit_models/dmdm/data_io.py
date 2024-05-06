@@ -94,10 +94,10 @@ def get_file_name_for_best_glmhmm_fold(cvbt_folds_model, model_idx, K,
         sigma, alpha, _ = get_best_map_params(map_params, animal=animal, fold=best_fold, K=K)
 
     key_for_dict = model +'_K_' + str(K) + '/fold_' + str(best_fold) \
-                        + '/alpha_' + str(alpha) + '/sigma_' + str(sigma)
+                        + '/alpha_' + str(alpha) + '/sigma_' + str(sigma) + '/fold_tuning_' + str(best_fold) 
     best_iter = best_init_cvbt_dict[key_for_dict]
 
-    fname_tail = '_a' + str(int(alpha*100)) + '_s' +  str(int(sigma*100)) + '.npz'
+    fname_tail = '_a' + str(int(alpha*100)) + '_s' +  str(int(sigma*100)) + '_l0' + '.npz'
     fpath = base_path / ('iter_' + str(best_iter)) / (fname_header + str(best_iter) + fname_tail)
     return fpath, best_fold
 

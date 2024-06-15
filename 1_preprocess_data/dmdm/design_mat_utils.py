@@ -19,38 +19,26 @@ def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard, history=5):
                                                                 stimT, 
                                                                 reactiontimes)
     
-    # choice_updated, stim_updated, stimT_updated, _ = remap_vals_v2(outcome_noref, 
-    #                                                             stim, 
-    #                                                             stimT, 
-    #                                                             reactiontimes)
-    
     # Change size:
     design_mat = np.zeros((len(stim_updated_onecolumn), 9))
-    stim_small = stim_updated_onecolumn.copy()
-    stim_small[stim_small<1] = 0 
-    stim_large = stim_updated_onecolumn.copy()
-    stim_large[stim_large>1] = 0
-    design_mat[:, 0] = stim_small
-    design_mat[:, 1] = stim_large
-    # design_mat[:, 0] = stim_updated_onecolumn # unnormalized
-    # design_mat = np.zeros((len(choice_updated), 9))
-    # design_mat[:, 0:5] = stim_updated[:,1:] # unnormalized
+    design_mat[:, 0] = stim_updated_onecolumn # unnormalized
 
-
-    # Change onset:
+    # Temporal expectation:
+    # reactiontimes
     # design_mat[:, 1] = stimT # unnormalized
     # arr[arr == 0] = -1
+    # prev_rt = create_previous_rt_vector(reactiontimes)
+    prev_choices, recent_rewarded = create_previous_choice_vector(outcome_noref, 3)
+    recent_rewarded_rt = reactiontimes[recent_rewarded]
+    design_mat[:, 1] = stimT <= recent_rewarded_rt.T
+
+    # Hazard block:
     design_mat[:, 2] = hazard
-    # arr[arr == 0] = -1
-    # design_mat[:, 1:3] = arr
 
     # previous choice vector:
-    # previous_choice = np.hstack([np.repeat(outcome_noref[0], 1), outcome_noref])[0:-1]
-    # create_previous_choice_vector_v2(outcome_noref, history=1)[0]
-    design_mat[:, 3:9] = create_previous_choice_vector_v3(outcome_noref, 3)
-    # design_mat[:, 6:9] = one_hot(previous_choice,4)[:,:-1] # no abort
+    design_mat[:, 3:9] = prev_choices
 
-    continuous_column = [0,1] # [0]
+    continuous_column = [0]
 
     return design_mat, outcome_noref, continuous_column
 
@@ -147,57 +135,7 @@ def remap_vals(choice, stim, stimT, rt, delay=0.5, miss_onset_delay = 2.15) -> n
 
     return choice_updated, stim_updated, stimT_updated, rt_updated
 
-def remap_vals_v2(choice, stim, stimT, rt, delay=0.5, miss_onset_delay = 2.15) -> np.array:
-    ''' 
-    choice: choice vector of size T. 
-            By default, hit = 1, FA = 2, miss = 0, abort = 3
-    stim: change size vector of size T
-    stimT: change onset vector of size T
-    '''
-    
-    # six columns of stimuli for every single trial including aborts and FAs
-    stim_updated = one_hot_stim(stim)
-    # So change FA size to never happened
-    locs_FA_abort = np.where((choice == 2) | (choice == 3))[0]
-    stim_updated[locs_FA_abort,:] = 0
-
-    # Treat hits in no change trials (where stim = 0) as FA
-    choice_updated = choice.copy()
-    stimT_updated  = stimT.copy()
-
-    rt_updated  = rt.copy()
-
-    return choice_updated, stim_updated, stimT_updated, rt_updated
-
 def create_previous_choice_vector(choice, history=1) -> np.array:
-    # The original choice vectors are
-    # hit with changes = 1, FA = 2, miss = 0, abort = 3.
-    # We will create a new vector about how deviant animal was performing in the previous trial.
-    choice_mapping = {1: 0, 2: 1, 0: -1, 3: 1}
-
-    prev_choice = np.zeros((len(choice), history))
-    for h in range(1, (history+1)):
-        previous_choice = np.hstack([np.repeat(choice[0], h), choice])[0:-h]
-        prev_choice[:,h-1] = [choice_mapping[old_choice] for old_choice in previous_choice]
-
-    return prev_choice
-
-def create_previous_choice_vector_v2(choice, history=1) -> np.array:
-    # The original choice vectors are
-    # hit with changes = 1, FA = 2, miss = 0, abort = 3.
-    # Same choice is 1
-    # We will create a new vector about how deviant animal was performing in the previous trial.
-    choice_mapping = {0: 1, 1: 0, 2: 0, 3: 0, -1: 0, -2: 0, -3: 0}
-
-    prev_choice = np.zeros((len(choice), history))
-    for h in range(1, (history+1)):
-        previous_choice = np.hstack([np.repeat(choice[0], h), choice])[0:-h]
-        diff_choice = np.subtract(choice, previous_choice)
-        prev_choice[:,h-1] = [choice_mapping[old_choice] for old_choice in diff_choice]
-
-    return prev_choice
-
-def create_previous_choice_vector_v3(choice, history=1) -> np.array:
     # The original choice vectors are
     # hit with changes = 1, FA = 2, miss = 0, abort = 3.
     # We will create a new vector about how deviant animal was performing in the previous trial.
@@ -210,34 +148,45 @@ def create_previous_choice_vector_v3(choice, history=1) -> np.array:
         prev_choices[:,2*h-2] = [changeepoch_choice_mapping[old_choice] for old_choice in previous_choice]
         prev_choices[:,2*h-1] = [baselineepoch_choice_mapping[old_choice] for old_choice in previous_choice]
 
-    return prev_choices
+    recent_rewarded = np.zeros((len(choice), 1), dtype=int)
+    locs_hit = np.where(choice == 1)[0]
+    for i, loc in enumerate(locs_hit):
+        if i == len(locs_hit) - 1: # final
+            recent_rewarded[loc+1:-1] = loc
+        else:
+            nextloc = locs_hit[i+1]
+            recent_rewarded[loc+1:nextloc+1] = loc
+
+    # recent_punished = np.zeros((len(choice), 1))
+    # locs_fa = np.where(previous_choice == 2)[0]
+
+    return prev_choices, recent_rewarded
 
 
-def create_previous_RT_vector(stimT, reactiontimes, locs_FA_abort):
-    ''' 
-    stimT: change onset vector of size T
-    reactiontimes: reaction times from baseline onset
-    locs_FA_abort: locations of FA or abort happened.
-    previous_stimT : vector of size T with previous change onset observed by animal.
-                     0 for FA and abort trials.
-    previous_rt : vector of size T with previous reactiontimes. 0 for miss.
-    '''
-    stimT_updated = stimT.copy()
-    for i, loc in enumerate(locs_FA_abort):
-        stimT_updated[loc] = 0
-    previous_stimT = np.hstack([np.array(stimT_updated[0]), stimT_updated])[:-1]
 
+def create_previous_rt_vector(reactiontimes, history=1) -> np.array:
+    # The original choice vectors are
+    # hit with changes = 1, FA = 2, miss = 0, abort = 3.
+    # We will create a new vector about how deviant animal was performing in the previous trial.
     rt_nonan = np.nan_to_num(reactiontimes, nan=0)
     previous_rt = np.hstack([np.array(rt_nonan[0]), rt_nonan])[:-1]
-    return previous_stimT, previous_rt
 
-def one_hot_stim(stim):
-    stim_mapping = {100: 0, 
-                    125: 1, 
-                    135: 2, 
-                    150: 3,
-                    200:4,
-                    400:5}
-    stim_int = [stim_mapping[int(s)] for s in stim*100] # *100 to deal with decimal point
-    soh = one_hot(stim_int, 6)
-    return soh
+    return previous_rt
+
+# def create_previous_RT_vector(stimT, reactiontimes, locs_FA_abort):
+#     ''' 
+#     stimT: change onset vector of size T
+#     reactiontimes: reaction times from baseline onset
+#     locs_FA_abort: locations of FA or abort happened.
+#     previous_stimT : vector of size T with previous change onset observed by animal.
+#                      0 for FA and abort trials.
+#     previous_rt : vector of size T with previous reactiontimes. 0 for miss.
+#     '''
+#     stimT_updated = stimT.copy()
+#     for i, loc in enumerate(locs_FA_abort):
+#         stimT_updated[loc] = 0
+#     previous_stimT = np.hstack([np.array(stimT_updated[0]), stimT_updated])[:-1]
+
+#     rt_nonan = np.nan_to_num(reactiontimes, nan=0)
+#     previous_rt = np.hstack([np.array(rt_nonan[0]), rt_nonan])[:-1]
+#     return previous_stimT, previous_rt

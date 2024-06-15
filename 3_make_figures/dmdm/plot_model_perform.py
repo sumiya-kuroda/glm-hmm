@@ -175,7 +175,7 @@ def plot_model_comparison(cv,
                           K_vals,
                           figure_directory,
                           y_label="Normalized LL",
-                          save_title='best_params_performance',
+                          save_title='best_params_performance_nll',
                           cols = ["#7e1e9c", "#0343df", "#15b01a", "#bf77f6", "#95d0fc","#96f97b"]):
 
     data_for_plotting_df, loc_best, best_val = \
@@ -227,6 +227,11 @@ def plot_model_comparison(cv,
     fig.savefig(figure_directory / (save_title + '.png'))
     plt.axis('off')
     plt.close(fig)
+
+    # data_for_plotting_df.to_csv(str(figure_directory / (save_title + '_test.csv')), index=False)  
+    data_for_plotting_df.to_pickle(str(figure_directory / (save_title + '_test.pkl')))  
+    # train_data_for_plotting_df.to_csv(str(figure_directory / (save_title + '_train.csv')), index=False)  
+    train_data_for_plotting_df.to_pickle(str(figure_directory / (save_title + '_train.pkl')))  
 
 def plot_model_comparison_l2(cv,
                           cv_train,

@@ -20,7 +20,7 @@ def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard, history=5):
                                                                 reactiontimes)
     
     # Change size:
-    design_mat = np.zeros((len(stim_updated_onecolumn), 9))
+    design_mat = np.zeros((len(stim_updated_onecolumn), 5))
     design_mat[:, 0] = stim_updated_onecolumn # unnormalized
 
     # Temporal expectation:
@@ -28,7 +28,7 @@ def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard, history=5):
     # design_mat[:, 1] = stimT # unnormalized
     # arr[arr == 0] = -1
     # prev_rt = create_previous_rt_vector(reactiontimes)
-    prev_choices, recent_rewarded = create_previous_choice_vector(outcome_noref, 3)
+    prev_choices, recent_rewarded = create_previous_choice_vector(outcome_noref, 1)
     recent_rewarded_rt = reactiontimes[recent_rewarded]
     design_mat[:, 1] = stimT <= recent_rewarded_rt.T
 
@@ -36,7 +36,7 @@ def create_design_mat_y(stim, outcome, reactiontimes, stimT, hazard, history=5):
     design_mat[:, 2] = hazard
 
     # previous choice vector:
-    design_mat[:, 3:9] = prev_choices
+    design_mat[:, 3:5] = prev_choices
 
     continuous_column = [0]
 

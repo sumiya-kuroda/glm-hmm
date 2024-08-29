@@ -8,14 +8,19 @@ import os
 from preprocessing_utils import scan_sessions, get_animal_name
 import defopt
 
-def main(dname):
+def main(dname: str, *, suffix: str = None):
     """
     Begin processing dmdm data: identify animals in dataset 
     that enter biased blocks and list their session ids.
     
     :param str dname: name of dataset needs to be preprocessed
+    :param str suffix: suffix of saving location if any
     """
     dirname = Path(os.path.dirname(os.path.abspath(__file__)))
+    if suffix is not None:
+        dname = dname + '_' + suffix
+
+    print('Beginning processing {} ...'.format(dname))
     dmdm_data_path =  dirname.parents[1] / "data" / "dmdm" / dname
     if not dmdm_data_path.exists():
         raise FileNotFoundError

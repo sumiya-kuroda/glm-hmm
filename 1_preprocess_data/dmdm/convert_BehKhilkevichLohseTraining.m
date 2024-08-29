@@ -1,9 +1,15 @@
-function convert_BehKhilkevichLohseTraining(matfile, concat)
+function convert_BehKhilkevichLohseTraining(matfile, concat, loc_suffix)
 % CONVERT_BEHKURODA  Convert Khilkevich and Lohse's training behavior data 
 %                    in an Ashwood's GLM-HMM-friendly format
 %
 % This function uses npy-matlab to convert from .mat to .npy
 % https://github.com/kwikteam/npy-matlab
+
+    arguments
+        matfile (1,1) string;
+        concat (1,1) logical;
+        loc_suffix (1,1) string = 'default';
+    end
 
     dmdm_data_path = fullfile(fileparts(mfilename('fullpath')) + ...
                               "/../../data/dmdm/");
@@ -13,7 +19,8 @@ function convert_BehKhilkevichLohseTraining(matfile, concat)
 
     % Load .mat and list animals
     % This tends to take a while - as behav data is quite large
-    disp(['Loading ', matfile, ' ...']);
+    fprintf('Loading %s ...\n', matfile);
+    % disp(['Loading ' matfile, ' ...']);
     AllBehav = load(matfile); 
 
     if ~contains(fieldnames(AllBehav),'fsm')
@@ -21,12 +28,17 @@ function convert_BehKhilkevichLohseTraining(matfile, concat)
     end
 
     animals = unique({AllBehav.fsm.participant});
-    disp(['Found ', int2str(numel(animals)), ' animals in ', matfile]);
+    disp(['Found ', int2str(numel(animals)), ' animals.']);
 
     % Create directory for saving converted data:
     [~,orifname] = fileparts(matfile);
-    fname = erase(orifname,"_fsm");
-    saving_location = dmdm_data_path + fname + "/Subjects/";
+    % fname = erase(orifname,"_fsm");
+    % saving_location = dmdm_data_path + fname + "/Subjects/";
+    if strcmp(loc_suffix, 'default')
+        saving_location = dmdm_data_path + 'dataAllMiceTraining' + "/Subjects/";
+    else
+        saving_location = dmdm_data_path + 'dataAllMiceTraining' + '_' + loc_suffix + "/Subjects/";
+    end
     if ~exist(saving_location, 'dir')
         mkdir(saving_location)
     end

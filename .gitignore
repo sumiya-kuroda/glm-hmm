@@ -1,0 +1,7 @@
+data*/
+results*/
+figures*/
+*.pyc
+.vscode/
+
+note_dmdm.md

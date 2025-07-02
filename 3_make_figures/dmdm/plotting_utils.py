@@ -46,7 +46,40 @@ def load_glmhmm_result(animal, K, model,
                                                 hmm_params, K, range(K))
     states_max_posterior = np.argmax(posterior_probs, axis=1)
 
-    return states_max_posterior, inpt_y, inpt_rt, y, session, rt, stim_onset, mask, hmm_params
+    return states_max_posterior, posterior_probs, inpt_y, inpt_rt, y, session, rt, stim_onset, mask, hmm_params
+
+def infer_individual_glmhmm_result(animal, K, model,
+                        results_2_dir, data_2_dir, data_dir_inference):
+
+    if K == 1:
+        raise ValueError('K needs to be > 1')
+    
+    this_results_dir = results_2_dir / animal
+    glmhmm_directory = data_2_dir / ("best_params_" + animal)
+
+    container = np.load(glmhmm_directory / ('best_params_' + model + '_K_' + str(K) + '.npz'), 
+                        allow_pickle=True)
+    data = [container[key] for key in container]
+    params = data[0]
+    hmm_params = params # np.array([params[0][0], params[1][0], params[2][0]])
+
+    animal_file = data_dir_inference / (animal + '_processed.npz')
+    inpt_y, inpt_rt, y, session, rt, stim_onset = load_data(animal_file)
+
+    inpt_y = np.hstack((inpt_y, np.ones((len(inpt_y),1))))
+    y = y.astype('int')
+    abort_idx = np.where(y == 3)[0]
+    nonviolation_idx, mask = create_abort_mask(abort_idx, inpt_y.shape[0])
+    y[np.where(y == 3), :] = 2
+    inputs, datas, masks = partition_data_by_session(
+        inpt_y, y, mask, session)
+
+    C = hmm_params[2].shape[1] 
+    posterior_probs = get_marginal_posterior(inputs, datas, masks, C,
+                                                hmm_params, K, range(K))
+    states_max_posterior = np.argmax(posterior_probs, axis=1)
+
+    return states_max_posterior, posterior_probs, inpt_y, inpt_rt, y, session, rt, stim_onset, mask, hmm_params
 
 def calc_dwell_time(df: pd.DataFrame) -> pd.DataFrame:
     dwell_across_sessions = pd.DataFrame()
@@ -109,7 +142,7 @@ def load_global_glmhmm_result(K, model, data_dir, regularization=None):
                                                 hmm_params, K, range(K))
     states_max_posterior = np.argmax(posterior_probs, axis=1)
 
-    return states_max_posterior, inpt_y, inpt_rt, y, session, rt, stim_onset, mask, hmm_params
+    return states_max_posterior, posterior_probs, inpt_y, inpt_rt, y, session, rt, stim_onset, mask, hmm_params
 
 def infer_global_glmhmm_result(K, model, data_dir, data_dir_inference, regularization=None):
 
@@ -148,7 +181,7 @@ def infer_global_glmhmm_result(K, model, data_dir, data_dir_inference, regulariz
                                                 hmm_params, K, range(K))
     states_max_posterior = np.argmax(posterior_probs, axis=1)
 
-    return states_max_posterior, inpt_y, inpt_rt, y, session, rt, stim_onset, mask, hmm_params
+    return states_max_posterior, posterior_probs, inpt_y, inpt_rt, y, session, rt, stim_onset, mask, hmm_params
 
 def flatten_list(list):
     return [item for sublist in list for item in sublist]

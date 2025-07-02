@@ -50,21 +50,30 @@ class KFoldCV(object):
   def _reset(self):
         if self.model == "GLM_y" or self.model == "Lapse_Model":
             num_models = num_alpha = num_sigma = 1
+            self.D = 1
+            if self.Lambda_vals is not None: 
+                self.cvbt_folds_model = np.zeros((len(self.Lambda_vals), self.num_folds))
+                self.cvbt_train_folds_model = np.zeros((len(self.Lambda_vals), self.num_folds))
+                self.best_init_cvbt_dict = {} # To save best initialization for each model-fold combination
+            else:
+                self.cvbt_folds_model = np.zeros((num_alpha, num_sigma, num_models, self.num_folds))
+                self.cvbt_train_folds_model = np.zeros((num_alpha, num_sigma, num_models, self.num_folds))
+                self.best_init_cvbt_dict = {} # To save best initialization for each model-fold combination
         elif self.model == "GLM_HMM_y":
             num_models = len(self.K_vals) # maximum number of latent states
             num_alpha = len(self.Alpha_vals)
             num_sigma = len(self.Sigma_vals)
-        self.D = 1  # number of output dimensions (only needed in GLM-HMM)
-        if self.Lambda_vals is not None: # L2 regularizationpenalization
-            num_lambda = len(self.Lambda_vals)
+            self.D = 1  # number of output dimensions (only needed in GLM-HMM)
+            if self.Lambda_vals is not None: # L2 regularizationpenalization
+                num_lambda = len(self.Lambda_vals)
 
-            self.cvbt_folds_model = np.zeros((num_lambda, num_models, self.num_folds))
-            self.cvbt_train_folds_model = np.zeros((num_lambda, num_models, self.num_folds))
-            self.best_init_cvbt_dict = {} # To save best initialization for each model-fold combination
-        else: # no penalization
-            self.cvbt_folds_model = np.zeros((num_alpha, num_sigma, num_models, self.num_folds))
-            self.cvbt_train_folds_model = np.zeros((num_alpha, num_sigma, num_models, self.num_folds))
-            self.best_init_cvbt_dict = {} # To save best initialization for each model-fold combination
+                self.cvbt_folds_model = np.zeros((num_lambda, num_models, self.num_folds))
+                self.cvbt_train_folds_model = np.zeros((num_lambda, num_models, self.num_folds))
+                self.best_init_cvbt_dict = {} # To save best initialization for each model-fold combination
+            else: # no penalization
+                self.cvbt_folds_model = np.zeros((num_alpha, num_sigma, num_models, self.num_folds))
+                self.cvbt_train_folds_model = np.zeros((num_alpha, num_sigma, num_models, self.num_folds))
+                self.best_init_cvbt_dict = {} # To save best initialization for each model-fold combination
 
 
   def save_best_iter(self,
@@ -163,22 +172,38 @@ class KFoldCV(object):
                             test_stim_onset, train_stim_onset,
                             ll0, ll0_train,
                             n_test, n_train,
-                            M_y: int, C: int, outcome_dict = None):
+                            M_y: int, C: int, outcome_dict = None,
+                            tuning=None):
         # Load parameters. Initerization does not matter for GLM
-        glm_weights_file = self.results_dir / 'GLM' / ('fold_' + str(fold)) / (self.model + '_variables_of_interest_iter_0.npz')            
-        
-        # Instantiate a new GLM object with these parameters
-        ll_glm = calculate_glm_test_loglikelihood(
-            glm_weights_file, test_y[np.where(test_mask == 1)[0], :],
-            test_inpt_y[np.where(test_mask == 1)[0], :], M_y, C, outcome_dict)
-        ll_glm_train = calculate_glm_test_loglikelihood(
-            glm_weights_file, train_y[np.where(train_mask == 1)[0], :],
-            train_inpt_y[np.where(train_mask == 1)[0], :], M_y, C, outcome_dict)
-        
-        self.cvbt_folds_model[0, 0, 0, fold] = calculate_cv_bit_trial(
-            ll_glm, ll0, n_test)
-        self.cvbt_train_folds_model[0, 0, 0, fold] = calculate_cv_bit_trial(
-            ll_glm_train, ll0_train, n_train)
+        if tuning is None:
+            glm_weights_file = self.results_dir / 'GLM' / ('fold_' + str(fold)) / (self.model + '_variables_of_interest_iter_0.npz') 
+            # Instantiate a new GLM object with these parameters
+            ll_glm = calculate_glm_test_loglikelihood(
+                glm_weights_file, test_y[np.where(test_mask == 1)[0], :],
+                test_inpt_y[np.where(test_mask == 1)[0], :], M_y, C, outcome_dict)
+            ll_glm_train = calculate_glm_test_loglikelihood(
+                glm_weights_file, train_y[np.where(train_mask == 1)[0], :],
+                train_inpt_y[np.where(train_mask == 1)[0], :], M_y, C, outcome_dict)
+            
+            self.cvbt_folds_model[0, 0, 0, fold] = calculate_cv_bit_trial(
+                ll_glm, ll0, n_test)
+            self.cvbt_train_folds_model[0, 0, 0, fold] = calculate_cv_bit_trial(
+                ll_glm_train, ll0_train, n_train)           
+        elif tuning == 'L2_tuning':
+            for L_idx, lambda_value in enumerate(self.Lambda_vals):
+                glm_weights_file = self.results_dir / ('foldtuning_' + str(fold)) / (self.model + '_variables_of_interest_iter_0_l' + str(lambda_value) + '.npz')            
+                # Instantiate a new GLM object with these parameters
+                ll_glm = calculate_glm_test_loglikelihood(
+                    glm_weights_file, test_y[np.where(test_mask == 1)[0], :],
+                    test_inpt_y[np.where(test_mask == 1)[0], :], M_y, C, outcome_dict)
+                ll_glm_train = calculate_glm_test_loglikelihood(
+                    glm_weights_file, train_y[np.where(train_mask == 1)[0], :],
+                    train_inpt_y[np.where(train_mask == 1)[0], :], M_y, C, outcome_dict)
+                
+                self.cvbt_folds_model[L_idx, fold] = calculate_cv_bit_trial(
+                    ll_glm, ll0, n_test)
+                self.cvbt_train_folds_model[L_idx, fold] = calculate_cv_bit_trial(
+                    ll_glm_train, ll0_train, n_train)
 
         return self.cvbt_folds_model, self.cvbt_train_folds_model
   
@@ -513,7 +538,19 @@ class KFoldCV(object):
                     train_y[np.where(train_mask == 1)[0], :],
                     train_y[np.where(train_mask == 1)[0], :], C)
 
-                if self.model == "GLM_HMM_y":
+                if self.model == "GLM_y":
+                    _, _, = self.cross_validate_glm(this_fold_training,
+                                    test_inpt_y, train_inpt_y,
+                                    test_inpt_rt, train_inpt_rt,
+                                    test_y, train_y,
+                                    test_mask, train_mask,
+                                    test_rt, train_rt,
+                                    test_stim_onset, train_stim_onset,
+                                    ll0, ll0_train,
+                                    n_test, n_train,
+                                    M_y, C, outcome_dict,
+                                    tuning='L2_tuning')
+                elif self.model == "GLM_HMM_y":
                     _, _, _ = self.cross_validate_glmhmm(this_fold_training,
                                                         test_inpt_y, train_inpt_y,
                                                         test_inpt_rt, train_inpt_rt,
@@ -537,37 +574,53 @@ class KFoldCV(object):
 
         print("Calculating best L2 parameters...")
         best_params = []
-        for model_idx, K in enumerate(self.K_vals):
-             this_cvbt_folds_model = self.cvbt_folds_model[:,model_idx,:] # test dataset
-             print(this_cvbt_folds_model)
-             mean_cvbt = np.mean(this_cvbt_folds_model, axis=1) # fold is stored in the last axis
-             this_cvbt_train_folds_model = self.cvbt_train_folds_model[:,model_idx,:]
-             mean_train_cvbt = np.mean(this_cvbt_train_folds_model, axis=1)
-             print(mean_train_cvbt)
-             assert mean_cvbt.ndim == 1,'Wrong shape of cvbt_folds_model'
+        if self.model == "GLM_y":
+            this_cvbt_folds_model = self.cvbt_folds_model # test dataset
+            mean_cvbt = np.mean(this_cvbt_folds_model, axis=1) # fold is stored in the last axis
+            print(mean_cvbt)
+            this_cvbt_train_folds_model = self.cvbt_train_folds_model
+            mean_train_cvbt = np.mean(this_cvbt_train_folds_model, axis=1)
+            assert mean_cvbt.ndim == 1,'Wrong shape of cvbt_folds_model'
         
-             best_idx = np.unravel_index(mean_cvbt.argmax(), mean_cvbt.shape)
-             print(best_idx)
-             best_lambda_idx = best_idx[0]
-             best_lambda = self.Lambda_vals[best_lambda_idx]
+            best_idx = np.unravel_index(mean_cvbt.argmax(), mean_cvbt.shape)
+            print(best_idx)
+            best_lambda_idx = best_idx[0]
+            best_lambda = self.Lambda_vals[best_lambda_idx]
 
-             this_best_params = [K, best_lambda, best_lambda_idx]
-             best_params.append(this_best_params)
+            this_best_params = [best_lambda, mean_cvbt]
+            best_params.append(this_best_params)
+        elif self.model == "GLM_HMM_y":
+            for model_idx, K in enumerate(self.K_vals):
+                this_cvbt_folds_model = self.cvbt_folds_model[:,model_idx,:] # test dataset
+                print(this_cvbt_folds_model)
+                mean_cvbt = np.mean(this_cvbt_folds_model, axis=1) # fold is stored in the last axis
+                this_cvbt_train_folds_model = self.cvbt_train_folds_model[:,model_idx,:]
+                mean_train_cvbt = np.mean(this_cvbt_train_folds_model, axis=1)
+                print(mean_train_cvbt)
+                assert mean_cvbt.ndim == 1,'Wrong shape of cvbt_folds_model'
+            
+                best_idx = np.unravel_index(mean_cvbt.argmax(), mean_cvbt.shape)
+                print(best_idx)
+                best_lambda_idx = best_idx[0]
+                best_lambda = self.Lambda_vals[best_lambda_idx]
 
-             if save_output:
-                saving_dir = self.results_dir / ('GLM_HMM_y_K_' + str(K)) / ('fold_' + str(this_fold_training))
-                # Save best initialization directories across animals, folds and models
-                json_dump = json.dumps(self.best_init_cvbt_dict)
-                f = open(saving_dir / "l2_tuning_cvbt_dict_{}.json".format(self.model), "w") # need to save for GLM?
-                f.write(json_dump)
-                f.close()
-                # Save cvbt_folds_model as numpy array for easy parsing across all
-                # models and folds
-                np.savez(saving_dir / "l2_tuning_cvbt_folds_model_{}.npz".format(self.model), mean_cvbt)
-                np.savez(saving_dir / "l2_tuning_cvbt_train_folds_model_{}.npz".format(self.model), mean_train_cvbt)
-                # plot_best_l2_params(mean_cvbt, 
-                #                       self.Alpha_vals, self.Sigma_vals,
-                #                       saving_dir, save_title='l2_tuning_model_{}'.format(self.model))
+                this_best_params = [K, best_lambda, best_lambda_idx]
+                best_params.append(this_best_params)
+
+                if save_output:
+                    saving_dir = self.results_dir / ('GLM_HMM_y_K_' + str(K)) / ('fold_' + str(this_fold_training))
+                    # Save best initialization directories across animals, folds and models
+                    json_dump = json.dumps(self.best_init_cvbt_dict)
+                    f = open(saving_dir / "l2_tuning_cvbt_dict_{}.json".format(self.model), "w") # need to save for GLM?
+                    f.write(json_dump)
+                    f.close()
+                    # Save cvbt_folds_model as numpy array for easy parsing across all
+                    # models and folds
+                    np.savez(saving_dir / "l2_tuning_cvbt_folds_model_{}.npz".format(self.model), mean_cvbt)
+                    np.savez(saving_dir / "l2_tuning_cvbt_train_folds_model_{}.npz".format(self.model), mean_train_cvbt)
+                    # plot_best_l2_params(mean_cvbt, 
+                    #                       self.Alpha_vals, self.Sigma_vals,
+                    #                       saving_dir, save_title='l2_tuning_model_{}'.format(self.model))
 
 
         self._reset()

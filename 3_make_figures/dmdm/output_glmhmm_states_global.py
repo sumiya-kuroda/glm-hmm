@@ -44,7 +44,7 @@ def main(*, dname: str, model: str, K:int, regularization: str, suffix: str = No
 
     if suffix is None:
         # Simply Load GLM-HMM results
-        states_max_posterior, _, inpt_rt, _, session, _, _, mask, hmm_params \
+        states_max_posterior, posterior_probs, _, inpt_rt, _, session, _, _, mask, hmm_params \
             = load_global_glmhmm_result(K, model, data_dir, regularization)
         
         # Load raw data eids
@@ -71,7 +71,7 @@ def main(*, dname: str, model: str, K:int, regularization: str, suffix: str = No
     else:
          # Infer GLM-HMM states
         data_dir_inference =  get_file_dir().parents[1] / "data" / "dmdm" / inference_input / 'data_for_cluster'
-        states_max_posterior, _, inpt_rt, _, session, _, _, mask, hmm_params \
+        states_max_posterior, posterior_probs, _, inpt_rt, _, session, _, _, mask, hmm_params \
             = infer_global_glmhmm_result(K, model, data_dir, data_dir_inference, regularization)
 
         # Load raw data eids
@@ -102,12 +102,39 @@ def main(*, dname: str, model: str, K:int, regularization: str, suffix: str = No
         b = np.where(states_max_posterior == zk)
         x = np.array(flatten_list(trialnum_all))[b]
         rdict[zk] = x.tolist()
+ 
+    probdict = dict(zip(flatten_list(trialnum_all), posterior_probs.tolist()))
 
     out_json = json.dumps(rdict)
+    prob_json = json.dumps(probdict)
+
     if suffix is None:
         f = open(str(figure_dir / "state_session_trial_{}_K_{}_{}.json".format(dname, K, is_regularized)), "w")
     else:
         f = open(str(figure_dir / "state_session_trial_{}_K_{}_{}_{}.json".format(dname, K, is_regularized, suffix)), "w")
+    f.write(out_json)
+    f.close()
+
+    if suffix is None:
+        f = open(str(figure_dir / "state_session_trial_{}_K_{}_{}_posteriorprobs.json".format(dname, K, is_regularized)), "w")
+    else:
+        f = open(str(figure_dir / "state_session_trial_{}_K_{}_{}_{}_posteriorprobs.json".format(dname, K, is_regularized, suffix)), "w")
+    f.write(prob_json)
+    f.close()
+
+    # highprob
+    rdict = defaultdict(list)
+    highprobs = np.any(np.apply_along_axis(lambda a1: a1 >= 0.8, axis=1,arr=posterior_probs))
+    for zk in range(K):
+        b = np.where(np.logical_and(states_max_posterior == zk, highprobs))[0]
+        x = np.array(flatten_list(trialnum_all))[b]
+        rdict[zk] = x.tolist()
+
+    out_json = json.dumps(rdict)
+    if suffix is None:
+        f = open(str(figure_dir / "state_session_trial_{}_K_{}_{}_highprob.json".format(dname, K, is_regularized)), "w")
+    else:
+        f = open(str(figure_dir / "state_session_trial_{}_K_{}_{}_{}_highprob.json".format(dname, K, is_regularized, suffix)), "w")
     f.write(out_json)
     f.close()
 

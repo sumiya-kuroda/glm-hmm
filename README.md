@@ -37,7 +37,7 @@ This will let you login to a compute node, and this node basically become my "se
 Then, activate the conda environment by the command below. (This will also load Matlab needed for some preprocessing.)
  ```sh
  module load miniconda
- module load matlab
+ module load matlab/R2021a
 
  conda activate glmhmm
 ```

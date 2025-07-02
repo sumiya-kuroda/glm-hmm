@@ -38,7 +38,7 @@ if [ "$FORMAT" = "Lohse" ]; then
 elif [ "$FORMAT" = "KhilkevichLohseTraining" ]; then
   matlab -nodisplay -nosplash -nodesktop -r "cd('$BASE'); \
                                             addpath(genpath('.')); \
-                                            convert_BehKhilkevichLohseTraining('$INPUT', false, '$SUFFIX'); \
+                                            convert_BehKhilkevichLohseTraining('$INPUT', false, 200, '$SUFFIX'); \
                                             exit"
 elif [ "$FORMAT" = "Kuroda" ]; then
   matlab -nodisplay -nosplash -nodesktop -r "cd('$BASE'); \

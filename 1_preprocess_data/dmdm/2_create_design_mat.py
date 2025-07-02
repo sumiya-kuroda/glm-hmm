@@ -137,7 +137,8 @@ def main(dname, *, req_num_sessions = 30, num_folds=5, suffix: str = None):
     for i, mat in enumerate([normalized_y_inpt, normalized_rt_inpt]):
         for c in needs_to_be_normalized[i]:
             # z-score
-            mat[:, c] = preprocessing.scale(mat[:, c], with_mean=False)
+            # mat[:, c] = preprocessing.scale(mat[:, c], with_mean=False)
+            mat[:, c] = preprocessing.minmax_scale(mat[:, c], feature_range=(0, 1))
             # min-max
             # mat[:, c] = preprocessing.minmax_scale(mat[:, c])
     

@@ -1,4 +1,4 @@
-function convert_BehKhilkevichLohseTraining(matfile, concat, loc_suffix)
+function convert_BehKhilkevichLohseTraining(matfile, concat, trial_num, loc_suffix)
 % CONVERT_BEHKURODA  Convert Khilkevich and Lohse's training behavior data 
 %                    in an Ashwood's GLM-HMM-friendly format
 %
@@ -8,6 +8,7 @@ function convert_BehKhilkevichLohseTraining(matfile, concat, loc_suffix)
     arguments
         matfile (1,1) string;
         concat (1,1) logical;
+        trial_num (1,1) {mustBeNumeric}
         loc_suffix (1,1) string = 'default';
     end
 
@@ -63,6 +64,9 @@ function convert_BehKhilkevichLohseTraining(matfile, concat, loc_suffix)
                 disp(sessions{s});
     
                 fsm = subData(strcmp({subData.session}, sessions{s}));
+                if strcmp(loc_suffix, 'default')
+                    fsm = fsm([fsm.trial]<trial_num);
+                end
     
                 % trial outcome
                 dmdm_trials.outcome = ConvertTrialOutcome({fsm.trialoutcome});
@@ -114,6 +118,7 @@ function convert_BehKhilkevichLohseTraining(matfile, concat, loc_suffix)
                 disp(sessions{s});
 
                 fsm = subData(strcmp({subData.session}, sessions{s}));
+                fsm = fsm([fsm.trial]<trial_num);
          
                 % trial outcome
                 dmdm_trials.outcome = ConvertTrialOutcome({fsm.trialoutcome});

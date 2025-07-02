@@ -30,7 +30,7 @@ def load_animal_eid_dict(file):
         animal_eid_dict = json.load(f)
     return animal_eid_dict
 
-def get_all_unnormalized_data_this_session(eid, path_to_dataset):
+def get_all_unnormalized_data_this_session(eid, path_to_dataset, trials_num=None):
     # Load raw data
     animal, session_id, changesize, hazardblock, outcome, reactiontimes, stimT \
         = get_raw_data(eid, path_to_dataset)

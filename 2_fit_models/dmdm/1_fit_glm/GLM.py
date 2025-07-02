@@ -9,7 +9,7 @@ import ssm.stats as stats
 from RUMNL import calculate_NestedMultinominalLogit, nested_categorical_logpdf, calculate_tau
 
 class glm(object):
-    def __init__(self, M, C, outcome_dict, taus=None, obs='Categorical'):
+    def __init__(self, M, C, outcome_dict, taus=None, obs='Categorical', regularization=None, l2_penalty=0):
         """
         GLM class. Currently supports Categorical, RUNML, and DiagonalGaussian
         :param M int: number of predictors
@@ -23,6 +23,8 @@ class glm(object):
         self.outcome_dict = outcome_dict
         self.taus = taus
         self.obs = obs
+        self.regularization = regularization
+        self.l2_penalty = l2_penalty
 
         # Parameters linking input to state distribution
         if (self.obs == 'Categorical') or (self.obs == 'RUNML'):
@@ -43,7 +45,11 @@ class glm(object):
         self.Wk = value
 
     def log_prior(self):
-        return 0
+        if self.regularization == None:
+            return 0
+        if self.regularization == 'L2':
+            return np.sum(-0.5 * self.l2_penalty * self.Wk**2)
+            # https://bmcmedresmethodol.biomedcentral.com/articles/10.1186/s12874-021-01374-y
 
     # Calculate time dependent logits - output is matrix of size Tx1xC
     # Input is size TxM
@@ -119,7 +125,8 @@ class glm(object):
             if (self.taus is None) & (self.obs == 'RUNML'):
                 self.taus = calculate_tau(data, self.outcome_dict, self.C)
             lls = self.log_likelihoods(data, input, mask, tag)
-            elbo += np.sum(lls)
+            print(input.shape)
+            elbo += np.sum(lls) # / data.shape[0]
         return elbo
 
     # recover log likelihood from weights
@@ -153,6 +160,12 @@ class glm(object):
             obj = self.log_marginal(datas, inputs, masks, tags)
             return -obj
 
+        # def _objective_L2(weights, itr):
+        #     self.weights = weights
+        #     obj = self.log_marginal(datas, inputs, masks, tags)
+        #     Lterm =
+        #     return -obj + Lterm
+        
         if (self.obs == 'Categorical') or (self.obs == 'RUNML'):
             Wk_1d, out_1d = optimizer(_objective, 
                                    self.weights,

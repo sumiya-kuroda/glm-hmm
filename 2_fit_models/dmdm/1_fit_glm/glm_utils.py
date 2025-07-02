@@ -16,9 +16,10 @@ def fit_glm_runml(inputs, datas, M, C, masks, outcome_dict):
     recovered_weights = new_glm.Wk
     return loglikelihood_train, recovered_weights, lls_progress
 
-def fit_glm(inputs, datas, M, C, masks=None, outcome_dict=None):
+def fit_glm(inputs, datas, M, C, masks=None, outcome_dict=None,
+            regularization=None,l2_penalty=0):
     # Initialize GLM and fit:
-    new_glm = glm(M, C, outcome_dict, obs='Categorical')
+    new_glm = glm(M, C, outcome_dict, obs='Categorical',regularization=regularization, l2_penalty=l2_penalty)
     # new_glm = glm(M, C, outcome_dict, tau=[1,1], dist='RUNML')
     weights_progress = new_glm.fit_glm(datas, inputs, masks=masks, tags=None, tol=1e-2) 
     lls_progress = new_glm.recover_lls(datas, inputs, masks, [None], weights_progress)
